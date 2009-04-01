@@ -29,15 +29,15 @@ def human_readable(n):
         size = '%.0f' % n + '%s' % unit[i]
     return size
 
-def ratioForHash(hash,uid,autostopDir=None):
+def ratioForHash(hash,uid):
 	ratio = float(0.0)
 
-	stopFile = os.path.join(autostopDir,hash+'.xml')
+	stopFile = os.path.join(AUTOSTOPD_DIR,hash+'.xml')
 		
 	if os.path.exists(stopFile):
 		ratio = ratioFromAutostopFile(stopFile)
 	else:
-		stopFile = os.path.join(autostopDir,uid+'.xml')
+		stopFile = os.path.join(AUTOSTOPD_DIR,uid+'.xml')
 		if os.path.exists(stopFile):
 			ratio = ratioFromAutostopFile(stopFile)
 	return ratio
@@ -54,14 +54,13 @@ def findNodeName(parentNode, name):
 verbose = False
 tsize = 0
 selectedHashes = []
-onlyForThisUser = False
+onlyForThisUser = True
 showTotals = True
 
 # opts:
 # --verbose/-v  ==> verbose = True
 # --hash=<hash> ==> selectedHash = hash
-# --all/--everyone/-a ==> show torrents for all users
-# --for-me ==> only show torrents owned by os.getuid()
+# --everyone/--all ==> show all downloads
 
 # setup args
 try:
@@ -70,8 +69,7 @@ except getopt.GetoptError:
 	print 'Usage: %s [file1.torrent ... fileN.torrent]' % argv[0]
 	print 'Optional arguments: [--verbose/-v]: show stats'
 	print '--hash=<hash>: only show this hash (implies verbose)'
-	print '--for-me: only show torrents you\'re downloading'
-	print '--all/--everyone/-a: show all torrents'
+	print '--all/-a: show all downloads'
 	print 'If torrents are specified, only those stats will be shown.'
 	exit(2)
 
@@ -82,26 +80,23 @@ for o,a in opts:
 		selectedHashes.append(a)
 		verbose = True
 		showTotals = False
-	elif o == '--for-me':
-		onlyForThisUser = True
-	elif o in ('--everyone','--all','-a'):
+	elif o in ('--everyone', '--all', '-a'):
 		onlyForThisUser = False
 
 for a in args:
 	if os.path.exists( a ) and a.endswith( '.torrent' ):
-		onlyForThisUser = False
 		info = infoFromTorrent(a)
 		if info == '':
 			print 'Failed to find anything matching %s' % (a)
 		else:
 			selectedHashes.append( sha( bencode( info  ) ).hexdigest() )
 
-dataStore = initDataStore()
-doc = minidom.parse( dataStore.torrentXML() )
+doc = minidom.parse( TORRENT_XML )
 
 if len(selectedHashes) > 0:
 	verbose = True
 	showTotals = False
+	onlyForThisUser = False
 
 totalSpeedUp = 0
 totalSpeedDn = 0
@@ -139,13 +134,10 @@ for torrent in doc.documentElement.childNodes:
 		totalSpeedDn += speedDn
 		status = findNodeName( torrent, 'status' )
 		eta = findNodeName( torrent, 'eta' )
-		ratio = float(0.0)
+		ratio = float(-0.00)
 
 		if bytesDn > 0:
 			ratio = float(bytesUp) / float(bytesDn)
-		else:
-			ratio = -0.00
-
 
 		if not onlyForThisUser:
 			ownerName = pwd.getpwuid(ownerUID)[0]
@@ -167,7 +159,7 @@ for torrent in doc.documentElement.childNodes:
 					print 'ETA: %s' % eta
 					if len(errMsg) > 0:
 						print 'ERROR: %s' % errMsg
-			print 'Uploaded: %s, downloaded: %s [Ratio: %.2f, stop @%.2f]' % (human_readable(bytesUp), human_readable(bytesDn), ratio,ratioForHash(hash,str(ownerUID),autostopDir=dataStore.autostopDir()))
+			print 'Uploaded: %s, downloaded: %s [Ratio: %.2f, stop @%.2f]' % (human_readable(bytesUp), human_readable(bytesDn), ratio,ratioForHash(hash,str(ownerUID)))
 			print ''
 
 if verbose:

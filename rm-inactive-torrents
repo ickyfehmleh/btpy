@@ -21,7 +21,7 @@ def deleteDownloadedTorrent(dir):
 		os.rmdir( dir )
 
 # stat()s a dir/file, checks to see if its older than n number of days
-def isFileOld(fn, daysOld=15):
+def isFileOld(fn, daysOld=9):
 	stats = os.stat(fn)
 	lastmod = datetime.date.fromtimestamp(stats[8])
 	today = datetime.date.today()
@@ -35,7 +35,6 @@ def processDirectory(root):
 	inactiveTorrents = []
 
 	for d in os.listdir( root ):
-		print '*** %s [%s]' % (d, os.path.join( root, d) )
 		if not d.startswith( '.' ) and not d.startswith('autostop') and not d.endswith( '.torrent' ):
 			if isFileOld( os.path.join( root, d ) ):
 				if not isTorrentProcessing(d):
@@ -49,6 +48,6 @@ inactiveTorrents = processDirectory( INCOMING_TORRENT_DIR )
 
 if len(inactiveTorrents) > 0:
 	for rmfile in inactiveTorrents:
-		#deleteDownloadedTorrent( rmfile )
+		deleteDownloadedTorrent( rmfile )
 		print 'Removed: ', rmfile
 exit()

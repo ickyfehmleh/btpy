@@ -11,9 +11,6 @@ import glob
 
 uid = os.getuid()
 
-ds = initDataStore()
-AUTOSTOPD_DIR = ds.autostopDir()
-
 print ''
 
 ###################################################################################
@@ -67,6 +64,27 @@ def showAllRequests(torrentFileList):
 			print ''
 			print 'Will stop all torrents at %.2f unless specified otherwise.' % defaultRatio
 ###################################################################################
+# 
+def createAutostopFile(autostopFile, hash=None):
+	try:
+		f = open( autostopFile, 'w' )
+		f.write( '<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n' )
+		f.write( '<autostop>\n' )
+		f.write( '\t<stop>\n' )
+
+		if hash:
+			f.write( '\t\t<hash>%s</hash>\n' % hash )
+
+		f.write( '\t\t<ratio>%s</ratio>\n' % ratioLevel )
+		f.write( '\t</stop>\n' )
+		f.write( '</autostop>\n' )
+		f.close()
+		os.chmod( autostopFile, 0640 )
+	except:
+		print 'Problem writing out this request!'
+		raise
+
+###################################################################################
 #
 def printUsageAndExit():
 	print 'This will stop a torrent after a certain ratio is achieved.'
@@ -105,7 +123,7 @@ for o,a in opts:
 			print 'Invalid number for default ratio!'
 			exit(2)
 
-		ds.createAutostopFile( ratioLevel, torrentHash=hash )
+		createAutostopFile( os.path.join( AUTOSTOPD_DIR, str(os.getuid()) ) + '.xml' )
 		print 'Will stop ALL torrents after a ratio of %.2f has been achieved.' % (ratioLevel)
 		print 'If a separate request is made for a torrent, that request overrides the default'
 		exit()
@@ -133,19 +151,21 @@ for tfile in args[startArg:]:
 		print 'Cannot find info on torrent %s' % tfile
 		continue
 
-	if not isFileOwnerCurrentUser( tfile ):
+	if not isFileOwnerCurrentUser(tfile):
 		print 'You do not own %s' % tfile
 		continue
 
 	hash = sha( bencode( torrent ) ).hexdigest()
+	autostopFile = os.path.join( AUTOSTOPD_DIR, hash )
 	torrentName = torrent['name']
 
+	autostopFile += '.xml'
+
 	# make a request to autostopd
-	## FIXME add new api to torrentstore or userdatastore for this
-	if ds.autostopExistsForHash( hash ) and not forceOverwrite:
+	if os.path.exists( autostopFile ) and not forceOverwrite:
 		if deleteExisting:
 			try:
-				ds.removeAutostopForHash( hash )
+				os.remove( autostopFile )
 				print 'Request for %s removed!' % tfile
 			except:
 				print 'Problem removing request for torrent %s' % tfile
@@ -158,6 +178,6 @@ for tfile in args[startArg:]:
 			print 'No request for %s found' % torrentName
 			continue
 
-		ds.stopTorrentHashAtRatio(ratioLevel, torrentHash=hash)
+		createAutostopFile(autostopFile, hash)
 
 		print 'Will stop torrent %s at ratio %.2f.' % (torrentName, ratioLevel)
