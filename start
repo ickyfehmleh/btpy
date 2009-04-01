@@ -38,7 +38,13 @@ if not os.path.exists( os.path.join( AUTOSTOPD_DIR, str(os.getuid())+".xml" ) ):
 try:
 	opts, args = getopt.getopt(argv[1:], 'f', ['force', 'cookie='])
 except getopt.GetoptError:
-	print '%s file1.torrent [--force/-f] [--cookie=path] fileN.torrent' % argv[0]
+	print '%s [--force/-f] [--cookie=path] file1.torrent ... fileN.torrent' % argv[0]
+	print ''
+	print '--force/-f: if a file has already been downloaded, download it again'
+	print '--cookie=<path>: read Netscape-style cookies from <path>'
+	print '                 defaults to ~/.btrss/cookies.txt'
+	print ''
+	print '%s can also fetch files from URLs via cookie-based authentication' % argv[0]
 	exit(2)
 
 for opt,arg in opts:
