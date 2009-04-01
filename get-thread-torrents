@@ -31,8 +31,6 @@ def fixURL(url):
 
 #############################################################################
 
-#test url = 'https://already.be/tt.php?t=68512'
-
 ## setup http
 cookieFile = os.path.join(os.environ["HOME"], ".btrss", "cookies.txt" )
 cj = cookielib.MozillaCookieJar()
