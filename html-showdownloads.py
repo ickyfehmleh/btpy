@@ -51,8 +51,7 @@ def human_readable(n):
 
 tsize = 0
 
-dataStore = initDataStore()
-doc = minidom.parse( dataStore.torrentXML() )
+doc = minidom.parse( TORRENT_XML )
 
 print "<html>"
 print "<head>"
@@ -132,16 +131,16 @@ for torrent in doc.documentElement.childNodes:
 		print "<td nowrap=\"nowrap\" align='center'>%s @ %s<br/>to %d peers</td>" % (human_readable(hstBytesUp), boldTransferRate(rateUp), numPeers)
 		print "<td nowrap=\"nowrap\" align='center'>%s @ %s<br/>from %d seeds</td>" % (human_readable(hstBytesDn),boldTransferRate(rateDn), numSeeds)
 
-		ownerUID = findNodeName(torrent,'owner')
-		hash = findNodeName(torrent,'hash')
-		stopRatio = ratioForHash(hash,ownerUID,autostopDir=dataStore.autostopDir())
-
 		print "<td nowrap=\"nowrap\" align='center'>"
 
 		if hstBytesDn > 0:
 			print "%.2f" % (float(hstBytesUp) / float(hstBytesDn))
 		else:
 			print "&nbsp;"
+
+		ownerUID = findNodeName(torrent,'owner')
+		hash = findNodeName(torrent,'hash')
+		stopRatio = ratioForHash(hash,ownerUID,autostopDir=AUTOSTOPD_DIR)
 
 		if stopRatio > 0.0:
 			print '<br/>(%.2f)' % stopRatio

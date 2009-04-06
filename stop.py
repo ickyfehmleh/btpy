@@ -4,6 +4,11 @@
 # - consult .stats.db to find out if a 1:1 ratio is achieved.  if not, do not
 #   let torrent stop without -f flag (force)
 #
+# BUGS
+# X a paused torrent cannot be stopped, it has to be started again and then
+#   stopped.  should probably check to see if INCOMING/<mdsum> exists, then
+#   proceed with writing the output
+# 
 ###########################################################################
 import os
 import time
@@ -14,27 +19,32 @@ from BitTornado.bencode import *
 from shutil import *
 import getopt
 from common import *
-from UserDataStore import UserData,UserDataStore
-from FlatFileUserDataStore import FlatFileUserDataStore
 
 escapeFilenames = True
 
-USER_TORRENT_LIST=os.path.join( os.getenv( "HOME" ), 'torrents.list' )
+#
+# return a list of all the files contained in a torrent
+#
+def allFilesFromTorrentInfo( info ):
+	files = []
 
-#==============================================================================
-def printSleepingStatus(timeToSleep):
-	timeToSleep = timeToSleep + 1
-	for i in range(1, timeToSleep ):
-		sysprint( "\r%d" % i )
-		time.sleep( 1 );
-	sysprint( "\n" );
-
+	if info.has_key('length'):
+		files.append( info['name'] )
+	else:
+		for file in info['files']:
+			path = ''
+			for item in file['path']:
+				if (path != ''):
+					path = path + "/"
+				path = path + item
+			files.append( path )
+	return files
 #==============================================================================
 # handy list of torrents one has downloaded so they can potentially script
 # the scp'ing of them to their local machines
 def recordLocalTorrent(path):
-	filename = USER_TORRENT_LIST
-	fn = LockFile( filename, mode='a', timeout=5, step=0.1 )
+	filename = os.path.join( os.getenv( "HOME" ), 'torrents.list' )
+	fn = open( filename, mode='a' )
 	fn.write( path )
 	fn.write( '\n' )
 	fn.close()
@@ -59,9 +69,6 @@ try:
 except getopt.GetoptError:
 	printUsageAndExit(sys.argv[0])
 
-dataStore = initDataStore()
-userDataStore = dataStore.getUserDataStore(torrentList=USER_TORRENT_LIST)
-
 for opt,arg in opts:
 	if opt == "--no-escape":
 		escapeFilename = False
@@ -76,12 +83,15 @@ for opt,arg in opts:
 	if opt in("--all-mine", "--all-active"):
 		print 'ERROR: Argument --all-active not implemented!'
 	if opt in('--all-inactive','-i','--inactive'):
-		for line in userDataStore.allActiveTorrents():
-			tname = line.name
-			hash = line.hash
+		f = open( ACTIVE_USER_TORRENTS, mode='r' )
+		for line in f.readlines():
+			tname = line.split(FILE_DELIMITER)[0]
+			hash = line.split(FILE_DELIMITER)[1]
 
-			if not dataStore.isTorrentHashActive(hash) and dataStore.isTorrentDataPresent(hash) and not tname in args:
-				args.append( tname )
+			if not isTorrentHashActive(hash):
+				if not tname in args:
+					args.append( tname )
+		f.close()
 		if len(args) == 0:
 			print 'No inactive torrents found!'
 			exit()
@@ -89,36 +99,43 @@ for opt,arg in opts:
 if len(args) == 0:
 	printUsageAndExit(sys.argv[0])
 
-for metainfo_name in args:
+for torrent_name in args:
 	print
-
-	if not os.path.exists( metainfo_name ) or not isFileReadable( metainfo_name):
-		print '%s not found or not readable.' % metainfo_name
+	metainfo_name = findTorrent(torrent_name)
+	
+	if metainfo_name == '':
+		print "Could not locate anything matching '%s', sorry!" % torrent_name
 		continue
 
 	if not isFileOwnerCurrentUser(metainfo_name):
 		print 'You do not own torrent \'%s\'' % metainfo_name
 		continue
 
-	data = userDataStore.findTorrentFromFile( metainfo_name )
-	if data is None:
+	info = infoFromTorrent(metainfo_name)
+
+	if info == '':
 		print 'Could not fetch info for %s' % metainfo_name
 		continue
 
-	# torrent may be paused so we'll check for the path first
-	if dataStore.isTorrentDataPresent(data):
-		if pauseOnly:
-			data.pause()
-		else:
-			data.stop()
+	info_hash = sha( bencode( info ) ).hexdigest()
 
-		if dataStore.isTorrentActive( data ):
+	# figure out what the name of the torrent is
+	torrentPath = os.path.join( INCOMING_TORRENT_DIR, info_hash )
+	torrentName = torrentPath + '.torrent'
+
+	# torrent may be paused so we'll check for the path first
+	if exists( torrentPath ):
+		if not pauseOnly:
+			## log that this torrent was downloaded
+			recordDownloadedTorrent(info)
+
+		if isTorrentHashActive( info_hash ):
+			os.remove( torrentName )
+
 			if pauseOnly:
 				print 'Paused torrent %s' % basename( metainfo_name )
-				dataStore.pauseTorrent(data)
 				continue
-			dataStore.stopTorrent(data)
-
+		
 			print 'Shutting down torrent %s' % basename( metainfo_name )
 
 			# - wait 20 seconds for btlaunchmanycurses to notice the rm'ed
@@ -128,38 +145,45 @@ for metainfo_name in args:
 
 		if deleteOnly:
 			try:
-				sysprint( 'Removing contents...' )
-				dataStore.deleteTorrentContents(data)
-				sysprint( 'Done!\n' )
+				sys.stdout.write( 'Removing contents...' )
+				sys.stdout.flush()
+				rmtree( torrentPath )
+				sys.stdout.write( 'Done!\n' )
+				sys.stdout.flush()				
 			except:
 				sys.stdout.flush()
 				print 'Failed to remove torrent contents (%s)' % sys.exc_info()
 				continue
 		else:
-			out = None
+			# - move INCOMING_TORRENT_DIR/mdsum/ to /share/torrents/%torrentFileNameMinus-dot_torrent%
+			#   UNLESS the torrent has a directory specified in it, in which
+			#   case move the mdsum dir to that directory.
+			cwd = os.path.realpath( os.getcwd() )
+			if escapeFilenames:
+				output = os.path.join( cwd, escapeFilename( info['name'] ) )
+			else:
+				output = os.path.join( cwd, info['name'] )
 
 			if info.has_key('length'):	## assume a single file
-				if escapeFilenames:
-					dataStore.copyTorrentContents( info_hash, os.path.realpath( os.getcwd() ), escapeFilename( info['name'] ) )
-				else:
-					dataStore.copyTorrentContents( info_hash, os.path.realpath( os.getcwd() ), info['name'] )
+				torrentedFile = os.path.join( torrentPath, info['name'] )
+				os.rename(torrentedFile, output)
+				os.utime( output, None )
 
 				## now wipe the directory
-				out = dataStore.deleteTorrentContents(info_hash)
-				print 'Wrote file to %s' % out
+				os.rmdir( torrentPath )
+				print 'Wrote output to %s' % output
 			else:
-				if escapeFilenames:
-					outdir = os.path.join( cwd, escapeFilename( info['name'] ) )
-				else:
-					outdir = os.path.join( cwd, info['name'] )
+				os.rename( torrentPath, output )
 
-				out = dataStore.copyTorrentContents(info_hash,outdir)
-				print 'Wrote directory to %s' % out
+				for tf in allFilesFromTorrentInfo(info):
+					fp = os.path.join( output, tf )
+					if os.path.exists(fp):
+						os.utime( fp, None )
 
-			dataStore.deleteTorrentContents(info_hash)
+				print 'Wrote contents to dir %s' % output
 
 			## log to our list of torrents
-			recordLocalTorrent(out)
+			recordLocalTorrent(output)
 
 		## now remove the local torrent file
 		try:
@@ -168,5 +192,3 @@ for metainfo_name in args:
 			print "Could not remove local torrent."
 	else:
 		print 'No torrent found with a signature of %s' % info_hash
-
-userDataStore.save()
