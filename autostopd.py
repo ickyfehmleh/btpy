@@ -87,7 +87,7 @@ def process():
 			autostopFile = os.path.join( AUTOSTOPD_DIR, hash ) + '.xml'
 
 			# should we even operate on it?  is it completed?
-			if fsize > bytesDn:
+			if findNodeName( torrent, 'status' ) != "seeding":
 				continue
 
 			# any requests for this?
