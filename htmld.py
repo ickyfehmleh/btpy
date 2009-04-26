@@ -102,7 +102,7 @@ def processRss(doc):
 			outp.println( '<item>')
 			outp.println( '<title><![CDATA[%s]]></title>' % name)
 			outp.println( '<author>htmld</author>' )
-			outp.println( '<pubDate>%s</pubDate>', time.ctime( time.time() ) )
+			outp.println( '<pubDate>%s</pubDate>' % time.ctime( time.time() ) )
 			outp.println( '<link>http://nowhere?hash=%s</link>' % hash )
 			outp.println( '<description>' )
 			
