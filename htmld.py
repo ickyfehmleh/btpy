@@ -22,7 +22,6 @@ class SafeWriteFile(object):
 		self._fileName=str(fileName)
 		self._tempFile=str(tempfile.mktemp())
 		self._fileHandle = open( self._tempFile, 'w' )
-		print '### SafeWriteFile: _fileName==%s || _tempFile == %s' % (self._fileName, self._tempFile)
 		
 	def writeline(self,s):
 		self._fileHandle.write( s )
@@ -77,7 +76,7 @@ def human_readable(n):
 
 
 def processRss(doc):
-	outp = SafeWriteFile('tmp.rss')
+	outp = SafeWriteFile('status-rss.xml')
 	print 'Writing tmp.rss'
 	outp.println('<?xml version="1.0" encoding="ISO-8859-1"?>' )
 	outp.println( '<rss version="2.0">' )
@@ -131,7 +130,7 @@ def processRss(doc):
 def processHtml(doc):
 	tsize = 0
 	
-	outp = SafeWriteFile('tmp.html')
+	outp = SafeWriteFile('status.html')
 	outp.println( "<head>" )
 	outp.println( '  <title>Downloads</title>' )
 	outp.println( '</head>' )
