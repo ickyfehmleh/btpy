@@ -89,7 +89,6 @@ def processRss(doc):
 	for torrent in doc.documentElement.childNodes:
 		if torrent.nodeName == 'torrent':
 			name = findNodeName( torrent, 'name' ).encode('utf-8')
-			print '### processing %s' % name
 			rateUp = float(findNodeName( torrent, 'uploadRate' ) )
 			rateDn = float(findNodeName( torrent, 'downloadRate' ) )
 			numPeers = int( findNodeName( torrent, 'peers' ) )
@@ -98,10 +97,13 @@ def processRss(doc):
 			status = findNodeName( torrent, 'status' )
 			bytesUp = int(findNodeName( torrent, 'totalUploadBytes'))
 			bytesDn = int(findNodeName( torrent, 'totalDownloadBytes'))
-			
+			hash = findNodeName(torrent,'hash')
+
 			outp.println( '<item>')
 			outp.println( '<title><![CDATA[%s]]></title>' % name)
-			outp.println( '<link>http://nowhere</link>' )
+			outp.println( '<author>htmld</author>' )
+			outp.println( '<pubDate>%s</pubDate>', time.ctime( time.time() ) )
+			outp.println( '<link>http://nowhere?hash=%s</link>' % hash )
 			outp.println( '<description>' )
 			
 			# upBytes @ rate || dnBytes @ rate (% complete)
@@ -115,7 +117,6 @@ def processRss(doc):
 				if bytesDn > 0:
 					outp.println( ', R: %.2f' % (float(bytesUp) / float(bytesDn)) )
 					ownerUID = findNodeName(torrent,'owner')
-					hash = findNodeName(torrent,'hash')
 					stopRatio = ratioForHash(hash,ownerUID,autostopDir=AUTOSTOPD_DIR)
 			
 					if stopRatio > 0.0:
