@@ -102,6 +102,7 @@ def processRss(doc):
 			
 			outp.println( '<item>')
 			outp.println( '<title><![CDATA[%s]]></title>' % name)
+			outp.println( '<link>http://nowhere</link>' )
 			outp.println( '<description>' )
 			
 			# upBytes @ rate || dnBytes @ rate (% complete)
@@ -243,7 +244,7 @@ def process():
 	printmsg('Processing...')
 	processRss(doc)
 	#processHtml(doc)
-	return False
+	return True
 
 def printmsg(msg,showDate=True):
 	if showDate:
@@ -261,7 +262,7 @@ cont = True
 while cont:
 	try:
 		cont = process()
-		#time.sleep(sleepTime)
+		time.sleep(sleepTime)
 	except KeyboardInterrupt:
 		cont = False
 	#except:
