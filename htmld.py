@@ -77,7 +77,6 @@ def human_readable(n):
 
 def processRss(doc):
 	outp = SafeWriteFile('status-rss.xml')
-	print 'Writing tmp.rss'
 	outp.println('<?xml version="1.0" encoding="ISO-8859-1"?>' )
 	outp.println( '<rss version="2.0">' )
 	outp.println( '<channel>' )
@@ -243,7 +242,7 @@ def process():
 	doc = minidom.parse( TORRENT_XML )
 	printmsg('Processing...')
 	processRss(doc)
-	#processHtml(doc)
+	processHtml(doc)
 	return True
 
 def printmsg(msg,showDate=True):
