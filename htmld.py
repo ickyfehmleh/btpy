@@ -253,7 +253,7 @@ def printmsg(msg,showDate=True):
 		print msg
 
 # main:
-sleepTime = MAX_SLEEP_TIME
+sleepTime = 30
 printmsg( 'Will sleep for %d secs' % sleepTime)
 
 cont = True
