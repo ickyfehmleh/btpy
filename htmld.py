@@ -239,10 +239,12 @@ def processHtml(doc):
 	outp.close()
 
 def process():
-	doc = minidom.parse( TORRENT_XML )
-	printmsg('Processing...')
-	processRss(doc)
-	processHtml(doc)
+	try:
+		doc = minidom.parse( TORRENT_XML )
+		processRss(doc)
+		processHtml(doc)
+	except:
+		printmsg( 'Caught exception parsing document: %s' % str(sys.exc_info()[0]) )
 	return True
 
 def printmsg(msg,showDate=True):
