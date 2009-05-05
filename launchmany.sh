@@ -6,6 +6,7 @@
 #DISPLAY_INTERVAL="5"
 DISPLAY_INTERVAL="3"
 LOG="/share/incoming/.data/status.log"
+ERROR_LOG="$LOG.ERROR"
 TORRENT_XML="/share/incoming/.data/torrents.xml"
 STOP_FLAG="N"
 
@@ -67,7 +68,7 @@ chmod 640 $TORRENT_XML
 while [ "$STOP_FLAG" = "N" ]
 do
 	logmsg "Starting..."
-	runProcess $bandwidth
+	runProcess $bandwidth 2>>$ERROR_LOG
 	sleep 5
 	sync;sync
 	logmsg "Restarting..."
