@@ -25,6 +25,7 @@ PERCENT_KEEP_FREE = .12
 #COMPLETED_TORRENT_DIR = '/share/test/monitored.done'
 
 DATA_DIR=os.path.join(INCOMING_TORRENT_DIR, '.data')
+TEMPLATE_DIR=os.path.join( DATA_DIR, 'templates' )
 AUTOSTOPD_DIR=os.path.join( DATA_DIR, 'autostopd')
 TORRENT_XML=os.path.join(DATA_DIR, 'torrents.xml')
 MASTER_HASH_LIST = os.path.join( DATA_DIR,'stats.db' )
