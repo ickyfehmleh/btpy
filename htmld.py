@@ -177,9 +177,9 @@ def processDocument(doc):
 	mapping = dict()
 	mapping['lastGeneratedDate'] = time.ctime()
 	
-	html.append( TemplatedFile('template.header.html' ).substitute(mapping) )
-	#rss.append( TemplatedFile('template.header.rss' ).substitute(mapping) )
-	tmpl = TemplatedFile('template.torrent.html')
+	html.append( TemplatedFile(os.path.join( TEMPLATE_DIR, 'template.header.html' ) ).substitute(mapping) )
+	#rss.append( TemplatedFile(os.path.join( TEMPLATE_DIR, 'template.header.rss' ) ).substitute(mapping) )
+	tmpl = TemplatedFile(os.path.join( TEMPLATE_DIR, 'template.torrent.html' ) )
 	
 	for torrent in doc.documentElement.childNodes:
 		if torrent.nodeName == 'torrent':
@@ -200,7 +200,7 @@ def processDocument(doc):
 	mapping['formattedTotalBytesDown'] = human_readable(totalBytesDn)
 	mapping['formattedTotalRateDown'] = human_readable(totalRateDn)
 	
-	html.append( TemplatedFile( 'template.footer.html' ).substitute( mapping ) )
+	html.append( TemplatedFile( os.path.join( TEMPLATE_DIR, 'template.footer.html' ) ).substitute( mapping ) )
 
 	outp = SafeWriteFile('status.html')
 	outp.writeline( string.join(html) )
