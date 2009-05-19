@@ -40,15 +40,17 @@ def allFilesFromTorrentInfo( info ):
 
 
 ################################################################################
+def touchFile(file):
+	if os.path.exists(file):
+		os.utime(file, None)
+		printmsg( 'Touched %s' % file)
+	else:
+		printmsg( 'Cannot touch %s: does not exist' % file )
+
 def touchAllTorrentFiles(info,torrentDir):
 	for tf in allFilesFromTorrentInfo(info):
-		fp = os.path.join( torrentDir, tf )
-		printmsg( 'touchAllTorrentFiles: about to touch "%s"' % fp )
-		if os.path.exists(fp):
-			os.utime( fp, None )
-			printmsg( 'Touched %s' % fp )
-	os.utime( torrentDir )
-	printmsg( 'Touched %s' % torrentDir )
+		touchFile( os.path.join( torrentDir, tf ) )
+	touchFile( torrentDir )
 
 def isTorrentProcessing(hash):
 	if isTorrentHashActive(hash):
