@@ -50,12 +50,12 @@ class TemplatedFile(object):
 ########################################################################
 
 def printmsg(msg,showDate=True,log=True):
+	appName = os.path.basename(sys.argv[0])
 	if showDate:
 		t = time.strftime( '%Y-%m-%d @ %I:%M:%S %P' )
-		print '[%s]: %s' % (t, msg)
+		print '%s [%s]: %s' % (appName,t, msg)
 
 		if log:
-			appName = os.path.basename(sys.argv[0])
 			f = open( os.path.join(DATA_DIR, appName + '.log' ), 'a' )
 			f.write( '[%s]: %s\n' % (t,msg) )
 			f.close()
