@@ -13,7 +13,7 @@ import re
 import datetime
 from xml.dom import minidom, Node
 import string
-import shelve
+from pysqlite2 import dbapi2 as sqlite
 
 ## constants
 INCOMING_TORRENT_DIR = '/share/incoming'
@@ -35,6 +35,47 @@ MAX_SLEEP_TIME = 20
 FILE_DELIMITER = ':'
 ACTIVE_USER_TORRENTS = os.path.expanduser( '~/.torrents.active' )
 ## /constants
+
+# ======================================================================
+class SqliteStats(object):
+	def __init__(self,dbFile):
+		self._dbFile = dbFile + '.sqlite'
+		self.statsDb = sqlite.connect(  self._dbFile )
+
+	def isHashAlreadyDownloaded(self,hash):
+		rv = False
+		c = self.statsDb.cursor()
+		c.execute( 'SELECT hash FROM user_data WHERE hash=?', (hash,))
+		row = c.fetchone()
+		if row:
+			rv = True
+		c.close()
+		return rv
+
+	def close(self):
+		self.statsDb.close()
+
+        def saveStatsForHashAndUser(self,hash,uid,uploaded=0,downloaded=0):
+		c = self.statsDb.cursor()
+		## will work as long as hash+uid == pk
+		c.execute( 'REPLACE INTO user_data (hash,uid,uploaded,downloaded) VALUES(?,?,?,?)',
+			(hash,str(uid),uploaded,downloaded))
+		c.close()
+		self.statsDb.commit()
+
+        def getStoredStatsForHashAndUser(self,hash,uid):
+		up = 0
+		dn = 0
+
+		c = self.statsDb.cursor()
+		c.execute( 'SELECT uploaded,downloaded FROM user_data WHERE uid=? AND hash=?', (uid,hash))
+		row = c.fetchone()
+
+		if row:
+		        up = long(row[0])
+		        dn = long(row[1])
+		c.close()
+		return up,dn
 
 # ======================================================================
 # write an array to a file
@@ -132,12 +173,12 @@ def checkDownloadStatus(h):
 
 	try:	
 		# open master hashes
-		hashes =  shelve.open( MASTER_HASH_LIST, flag='r' )
-		found = hashes.has_key(h)
-		hashes.close()
+		stats = SqliteStore(MASTER_HASH_LIST)
+		found = stats.isHashAlreadyDownloaded(h)
+		stats.close()
 	except:
 		print 'EXception caught!: %s' % exc_info()
-		found = False
+		found = True
 
 	return found
 
