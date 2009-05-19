@@ -1,0 +1,90 @@
+body,td,th {
+	font-family: Verdana, Arial, Helvetica, sans-serif;
+	font-size: 11px;
+}
+body {
+	background-color: #666666;
+}
+.mainTable {
+	color: #000000;
+	background-color:#ffffff;
+}
+.statusSeeding .otherStatusInfo {
+	display:none;
+}
+.statusSeeding .downloadStatusInfo {
+	display:none;
+}
+
+.statusStoppable {
+	color:#000000;
+	font-weight:bold;
+	background-color:#CCFFCC;
+}
+.statusStoppable .otherStatusInfo {
+	display:none;
+}
+.statusStoppable .downloadStatusInfo {
+	display:none;
+}
+
+.statusDownloading {
+	font-size:10px;
+}
+.statusDownloading .otherStatusInfo {
+	display:none;
+}
+
+.statusDownloading .downloadStatusInfo {
+	color:#ffffff;
+	font-size:10px;
+	background-color:#006600;
+}
+
+.statusOther .downloadStatusInfo {
+	display:none;
+}
+.statusOther .otherStatusInfo {
+	color:#ffffff;
+	font-size:10px;
+	background-color:#660000;
+}
+
+.tableHeader {
+	color:#ffffff;
+	background-color:#000000;
+	font-weight:bold;
+	padding:10px;
+}
+.tableFooter {
+	color:#ffffff;
+	background-color:#000000;
+	font-weight:bold;
+	padding:10px;
+}
+.sizeSlug {
+	color:#CC6600;
+	font-weight:bold;
+	font-size:10px;
+}
+.dlEta {
+	color:#ffffff;
+	font-size:10px;
+	background-color:#006600;
+}
+.dlStatus {
+	color:#ffffff;
+	font-size:10px;
+	background-color:#660000;
+}
+.errMsg {
+	color:#ffffff;
+	font-size:10px;
+	background-color:red
+}
+.timestamp {
+	color: #FFFFFF;
+}
+tr {
+	overflow:visible;
+	}
