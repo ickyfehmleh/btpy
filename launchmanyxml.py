@@ -26,7 +26,7 @@ import shelve
 import time
 import shutil
 from stat import *
-from common import * # FIXME import common for torrent.xml define?
+from common import *
 from BitTornado.bencode import bdecode
 from pysqlite2 import dbapi2 as sqlite
 
@@ -69,73 +69,6 @@ def hours(n):
 
 Exceptions = []
 
-class SqliteStats(object):
-	def __init__(self,dbFile):
-		self._dbFile = dbFile + '.sqlite'
-		self.statsDb = sqlite.connect(  self._dbFile )
-	
-        def saveStatsForHashAndUser(self,hash,uid,uploaded=0,downloaded=0):
-		c = self.statsDb.cursor()
-		## will work as long as hash+uid == pk
-		c.execute( 'REPLACE INTO user_data (hash,uid,uploaded,downloaded) VALUES(?,?,?,?)',
-			(hash,str(uid),uploaded,downloaded))
-		c.close()
-		self.statsDb.commit()
-
-        def getStoredStatsForHashAndUser(self,hash,uid):
-		up = 0
-		dn = 0
-
-		c = self.statsDb.cursor()
-		c.execute( 'SELECT uploaded,downloaded FROM user_data WHERE uid=? AND hash=?', (uid,hash))
-		row = c.fetchone()
-
-		if row:
-		        up = long(row[0])
-		        dn = long(row[1])
-		c.close()
-		return up,dn
-
-class ShelveStats(object):
-	def __init__(self,dbmFile):
-		self._dbmFile=dbmFile
-
-	def saveStatsForHashAndUser(self,hash,uid,uploaded=0,downloaded=0):
-		s = shelve.open(self._dbmFile)
-		uid = str(uid)
-		if not s.has_key(hash):
-			s[hash] = dict()
-		uidMap = s[hash]
-		if not uidMap.has_key(uid):
-			uidMap[uid] = dict()
-		userinfo = uidMap[uid]
-		userinfo['dn'] = downloaded
-		userinfo['up'] = uploaded
-		uidMap[uid] = userinfo
-		s[hash] = uidMap
-		s.close()
-
-	def getStoredStatsForHashAndUser(self,hash,uid):
-		s = shelve.open(self._dbmFile)
-		uid=str(uid)
-		up=0
-		dn=0
-		if not s.has_key(hash):
-			s[hash] = dict()
-		uidMap = s[hash]
-		if not uidMap.has_key(uid):
-			uidMap[uid] = dict()
-		userinfo = uidMap[uid]
-		if not userinfo.has_key('dn'):
-			userinfo['dn'] = 0
-		if not userinfo.has_key('up'):
-			userinfo['up'] = 0
-		dn = userinfo['dn']
-		up = userinfo['up']
-		s[hash] = uidMap
-		s.close()
-		return up,dn
-
 class XMLDisplayer:
 	outputXMLFile = TORRENT_XML
 	dbmstats = {}
@@ -146,7 +79,6 @@ class XMLDisplayer:
 
 	def __init__(self,basedir):
 		dataDir = os.path.join(basedir,'.data')
-		#self.statsRecorder = ShelveStats(MASTER_HASH_LIST)
 		self.statsRecorder = SqliteStats(MASTER_HASH_LIST)
 
 	def mergedStats(self,key):
@@ -161,6 +93,7 @@ class XMLDisplayer:
 	def cleanup(self):
 		self.saveStats()
 		os.unlink(self.outputXMLFile)
+		self.statsRecorder.close()
 
 	def saveStats(self):
 		for hash in self.livestats:
