@@ -4,36 +4,63 @@
 #
 # additionally consult /share/incoming/.torrents.xml to print stats
 # 
-from sys import *
+import sys
 from common import *
 from xml.dom import minidom, Node
 import string
 import math
 import time
+from string import Template
+import string
 import os.path
-import os
 import shutil
 import tempfile
-from common import *
-import sys
 
 class SafeWriteFile(object):
 	def __init__(self,fileName):
 		self._fileName=str(fileName)
 		self._tempFile=str(tempfile.mktemp())
 		self._fileHandle = open( self._tempFile, 'w' )
-		
+
 	def writeline(self,s):
 		self._fileHandle.write( s )
 		self._fileHandle.write( '\n' )
-		
+
 	def println(self,s):
 		self.writeline(s)
-		
+
 	def close(self):
 		self._fileHandle.close()
 		shutil.move(self._tempFile, self._fileName)
-#####
+
+class TemplatedFile(object):
+	def __init__(self,templateFile):
+		self._templateFile=templateFile
+		self._contents = self._contentsOfFile(self._templateFile)
+
+	def _contentsOfFile(self,fileName):
+		f = open( fileName, 'r')
+		s = f.read()
+		f.close()
+		return s
+
+	def substitute(self,mapping):
+		s = Template(self._contents).substitute(mapping)
+		return s
+########################################################################
+
+def printmsg(msg,showDate=True,log=True):
+	if showDate:
+		t = time.strftime( '%Y-%m-%d @ %I:%M:%S %P' )
+		print '[%s]: %s' % (t, msg)
+
+		if log:
+			appName = os.path.basename(sys.argv[0])
+			f = open( os.path.join(DATA_DIR, appName + '.log' ), 'a' )
+			f.write( '[%s]: %s\n' % (t,msg) )
+			f.close()
+	else:
+		print msg
 
 def boldTransferRate(n):
 	n = long(n)
@@ -44,17 +71,17 @@ def boldTransferRate(n):
 	return s
 
 def ratioForHash(hash,uid,autostopDir=None):
-        ratio = float(0.0)
+	ratio = float(0.0)
 
-        stopFile = os.path.join(autostopDir,hash+'.xml')
+	stopFile = os.path.join(autostopDir,hash+'.xml')
 
-        if os.path.exists(stopFile):
-                ratio = ratioFromAutostopFile(stopFile)
-        else:
-                stopFile = os.path.join(autostopDir,uid+'.xml')
-                if os.path.exists(stopFile):
-                        ratio = ratioFromAutostopFile(stopFile)
-        return ratio
+	if os.path.exists(stopFile):
+		ratio = ratioFromAutostopFile(stopFile)
+	else:
+		stopFile = os.path.join(autostopDir,uid+'.xml')
+		if os.path.exists(stopFile):
+			ratio = ratioFromAutostopFile(stopFile)
+	return ratio
 
 ## stolen from btlaunchmanycurses.py
 def human_readable(n):
@@ -62,99 +89,81 @@ def human_readable(n):
     unit = [' B', 'K', 'M', 'G', 'T', 'P', 'E', 'Z', 'Y']
     i = 0
     if (n > 999):
-        i = 1
-        while i + 1 < len(unit) and (n >> 10) >= 999:
-            i += 1
-            n >>= 10
-        n = float(n) / (1 << 10)
+	i = 1
+	while i + 1 < len(unit) and (n >> 10) >= 999:
+	    i += 1
+	    n >>= 10
+	n = float(n) / (1 << 10)
     if i > 0:
-        size = '%.1f' % n + '%s' % unit[i]
+	size = '%.1f' % n + '%s' % unit[i]
     else:
-        size = '%.0f' % n + '%s' % unit[i]
+	size = '%.0f' % n + '%s' % unit[i]
     return size
+########################################################################
 
+def statsForTorrentNode(torrent):
+	mapping = dict()
+	torrentPath = findNodeName( torrent, 'fullpath' )
+	name = findNodeName( torrent, 'name' ).encode('utf-8')
+	fsize = int( findNodeName( torrent, 'filesize' ) )
+	hstBytesUp = int(findNodeName( torrent, 'totalUploadBytes'))
+	hstBytesDn = int(findNodeName( torrent, 'totalDownloadBytes'))
+	rateUp = float(findNodeName( torrent, 'uploadRate' ) )
+	rateDn = float(findNodeName( torrent, 'downloadRate' ) )
+	status = findNodeName( torrent, 'status' )
+	eta = findNodeName( torrent, 'eta' )
 
+	if hstBytesDn > 0:
+		mapping['ratio'] = '%.2f' % (float(hstBytesUp) / float(hstBytesDn))
+	else:
+		mapping['ratio'] = '&nbsp;'
 
-def processRss(doc):
-	outp = SafeWriteFile('status-rss.xml')
-	outp.println('<?xml version="1.0" encoding="ISO-8859-1"?>' )
-	outp.println( '<rss version="2.0">' )
-	outp.println( '<channel>' )
-	outp.println( '<title>Status</title>' )
-	outp.println( '<link>http://www.howiesilberg.com/stuff.html?from=rss</link>' )
-	outp.println( '<language>en-us</language>' )
-	outp.println( '<copyright>1969-2036 HMS</copyright>' )
+	# 1:1 achieved?
+	if status == 'seeding':
+		if hstBytesUp > hstBytesDn:
+			mapping['tableRowClass'] = 'statusStoppable'
+		else:
+			mapping['tableRowClass'] = 'statusSeeding'
+	else:
+		if eta == "complete!":
+			 mapping['tableRowClass'] = 'statusOther'
+		else:
+			 mapping['tableRowClass'] = 'statusDownloading'
 
-	for torrent in doc.documentElement.childNodes:
-		if torrent.nodeName == 'torrent':
-			name = findNodeName( torrent, 'name' ).encode('utf-8')
-			rateUp = float(findNodeName( torrent, 'uploadRate' ) )
-			rateDn = float(findNodeName( torrent, 'downloadRate' ) )
-			numPeers = int( findNodeName( torrent, 'peers' ) )
-			numSeeds = int( findNodeName( torrent, 'seeds') )
-			fsize = int( findNodeName( torrent, 'filesize' ) )
-			status = findNodeName( torrent, 'status' )
-			bytesUp = int(findNodeName( torrent, 'totalUploadBytes'))
-			bytesDn = int(findNodeName( torrent, 'totalDownloadBytes'))
-			hash = findNodeName(torrent,'hash')
+	mapping['torrentName'] = name
+	mapping['formattedFileSize'] = human_readable(fsize)
+	mapping['fileSize'] = fsize
+	
+	## "dlStatus"
+	mapping['status'] = status
+	mapping['progressPercentage'] = findNodeName(torrent,'progress')
+	mapping['eta'] = eta
+	mapping['errorMessage'] = findNodeName(torrent,'msg')
 
-			outp.println( '<item>')
-			outp.println( '<title><![CDATA[%s]]></title>' % name)
-			outp.println( '<author>htmld</author>' )
-			outp.println( '<pubDate>%s</pubDate>' % time.ctime( time.time() ) )
-			outp.println( '<link>http://nowhere?hash=%s</link>' % hash )
-			outp.println( '<description>' )
-			
-			# upBytes @ rate || dnBytes @ rate (% complete)
-			if status != 'seeding': 
-				eta = findNodeName( torrent, 'eta' )
-				progressPercentage = findNodeName(torrent,'progress')
+	## down rate
+	mapping['bytesDown'] = hstBytesDn
+	mapping['formattedBytesDown'] = human_readable(hstBytesDn)
+	mapping['rateDown'] = rateDn
+	mapping['formattedRateDown'] = boldTransferRate(rateDn)
+	mapping['seedCount'] = int( findNodeName( torrent, 'seeds') )		
 
-				outp.println( '%s complete: %s (%s @ %s dn)' % (progressPercentage, eta, human_readable(bytesDn), human_readable(rateDn)) )
-			else:
-				outp.println( '%s @ %s up' % (human_readable(bytesUp), human_readable(rateUp)))  
-				if bytesDn > 0:
-					outp.println( ', R: %.2f' % (float(bytesUp) / float(bytesDn)) )
-					ownerUID = findNodeName(torrent,'owner')
-					stopRatio = ratioForHash(hash,ownerUID,autostopDir=AUTOSTOPD_DIR)
-			
-					if stopRatio > 0.0:
-						outp.println( '/%.2f' % stopRatio )					
-			
-			outp.println( '</description>')
-			outp.println( '</item>')
-	outp.println('</channel>' )
-	outp.println('</rss>' )
-	outp.close()
-			
-def processHtml(doc):
+	## up rate
+	mapping['bytesUp'] = hstBytesUp
+	mapping['formattedBytesUp'] = human_readable(hstBytesUp) 
+	mapping['rateUp'] = rateUp
+	mapping['formattedRateUp'] = boldTransferRate(rateUp)
+	mapping['peerCount'] = int( findNodeName( torrent, 'peers' ) )
+
+	ownerUID = findNodeName(torrent,'owner')
+	hash = findNodeName(torrent,'hash')
+	stopRatio = ratioForHash(hash,ownerUID,autostopDir=AUTOSTOPD_DIR)
+	mapping['stopRatio'] = '%.2f' % stopRatio
+
+	return mapping
+########################################################################
+
+def processDocument(doc):
 	tsize = 0
-	
-	outp = SafeWriteFile('status.html')
-	outp.println( "<head>" )
-	outp.println( '  <title>Downloads</title>' )
-	outp.println( '</head>' )
-	# TODO: separate out into its own .css
-	outp.println( '<link rel=\"stylesheet\" href=\"/tinfo.css\" type=\"text/css\">' )
-	
-	# do not cache this page!
-	outp.println( '<META HTTP-EQUIV=\"Pragma\" CONTENT=\"no-cache\">' )
-	outp.println( '<META HTTP-EQUIV=\"Expires\" CONTENT=\"-1\">' )
-	outp.println( '<body>' )
-	outp.println( '' )
-	
-	# last updated time
-	outp.println( '<span class=\"timestamp\"><b>Last Generated</b>: %s</span><br/><br/>' % time.ctime( time.time() ) )
-	
-	outp.println( '' )
-	outp.println( '<table border=\"1\" cellspacing=\"0\" cellpadding=\"2\" width=\"100%\" class=\"mainTable\">' )
-	outp.println( '<tr class=\"tableHeader\">' )
-	outp.println( '	<th width=\"75%\" align=\"center\">Name [Size]</font></th>' )
-	outp.println( '	<th width=\"10%\" align=\"center\">Up @ Rate</font></th>' )
-	outp.println( '	<th width=\"10%\" align=\"center\">Dn @ Rate</font></th>' )
-	outp.println( ' <th width=\"5%\" align=\"center\">Ratio</font></th>' )
-	outp.println( '</tr>' )
-	outp.println( '' )
 	
 	totalBytesUp = 0
 	totalBytesDn = 0
@@ -162,97 +171,48 @@ def processHtml(doc):
 	totalRateDn  = 0
 	totalIncoming = 0
 	
+	html = []
+	rss = []
+	
+	mapping = dict()
+	mapping['lastGeneratedDate'] = time.ctime()
+	
+	html.append( TemplatedFile('template.header.html' ).substitute(mapping) )
+	#rss.append( TemplatedFile('template.header.rss' ).substitute(mapping) )
+	tmpl = TemplatedFile('template.torrent.html')
+	
 	for torrent in doc.documentElement.childNodes:
-	
 		if torrent.nodeName == 'torrent':
-			torrentPath = findNodeName( torrent, 'fullpath' )
+			stats = statsForTorrentNode(torrent)
+			totalIncoming += long(stats.get('fileSize',0))
+			totalRateUp += float(stats['rateUp'])
+			totalRateDn += float(stats['rateDown'])
+			totalBytesUp += long(stats['bytesUp'])
+			totalBytesDn += long(stats['bytesDown'])
 	
-			name = findNodeName( torrent, 'name' ).encode('utf-8')
-			fsize = int( findNodeName( torrent, 'filesize' ) )
-			totalIncoming += fsize
-			hstBytesUp = int(findNodeName( torrent, 'totalUploadBytes'))
-			hstBytesDn = int(findNodeName( torrent, 'totalDownloadBytes'))
-			totalBytesUp += hstBytesUp
-			totalBytesDn += hstBytesDn
-			rateUp = float(findNodeName( torrent, 'uploadRate' ) )
-			rateDn = float(findNodeName( torrent, 'downloadRate' ) )
-			totalRateUp += rateUp
-			totalRateDn += rateDn
-			status = findNodeName( torrent, 'status' )
-			eta = findNodeName( torrent, 'eta' )
-			numPeers = int( findNodeName( torrent, 'peers' ) )
-			numSeeds = int( findNodeName( torrent, 'seeds') )
+			html.append( tmpl.substitute(stats) )
 	
-			# 1:1 achieved?
-			ratioOK = False
-			if hstBytesUp > fsize and status == "seeding" and hstBytesUp > hstBytesDn:
-				outp.println( '<tr class=\"seededStoppable\">' )
-				ratioOK = True
-			else:
-				outp.println( '<tr>' )
+	## footers
+	mapping = dict()
+	mapping['formattedTotalBytes'] = human_readable(totalIncoming)
+	mapping['formattedTotalBytesUp'] = human_readable(totalBytesUp)
+	mapping['formattedTotalRateUp'] = human_readable(totalRateUp)
+	mapping['formattedTotalBytesDown'] = human_readable(totalBytesDn)
+	mapping['formattedTotalRateDown'] = human_readable(totalRateDn)
 	
-			outp.println( '<td align=\"left\">%s <span class=\"sizeSlug\">[%s]</span>' % (name, human_readable(fsize)) )
-	
-			if status != "seeding":
-				progressPercentage = findNodeName(torrent,'progress')
-				msg = findNodeName(torrent,'msg')
-	
-				if eta == "complete!":
-					outp.println( '<br/><span class=\"dlStatus\"><b>Status</b>: %s (%s)</span>' % (status, progressPercentage) )
-				else:
-					outp.println( '<br/><span class=\"dlEta\"><b>ETA</b>: %s [%s complete]</span>' % (eta,progressPercentage) )
-				if msg is not None and len(msg) > 0:
-					outp.println( ' <span class=\"errMsg\">%s</span>' % msg )
-			outp.println( '</td>' )
-	
-			outp.println( '<td nowrap=\"nowrap\" align="center">%s @ %s<br/>to %d peers</td>' % (human_readable(hstBytesUp), boldTransferRate(rateUp), numPeers) )
-			outp.println( '<td nowrap=\"nowrap\" align="center">%s @ %s<br/>from %d seeds</td>' % (human_readable(hstBytesDn),boldTransferRate(rateDn), numSeeds) )
-	
-			outp.println( '<td nowrap=\"nowrap\" align="center">' )
-	
-			if hstBytesDn > 0:
-				outp.println( '%.2f' % (float(hstBytesUp) / float(hstBytesDn)) )
-			else:
-				outp.println( '&nbsp;' )
-	
-			ownerUID = findNodeName(torrent,'owner')
-			hash = findNodeName(torrent,'hash')
-			stopRatio = ratioForHash(hash,ownerUID,autostopDir=AUTOSTOPD_DIR)
-	
-			if stopRatio > 0.0:
-				outp.println( '<br/>(%.2f)' % stopRatio )
-	
-			outp.println( '</td>' )
-			outp.println( '</tr>' )
-	# totals
-	outp.println( '<tr class=\"tableFooter\">' )
-	outp.println( ' <td nowrap=\"nowrap\" align="right">= %s</td>' % human_readable(totalIncoming) )
-	outp.println( ' <td nowrap=\"nowrap\" align="right">= %s @ %s/s</td>' % (human_readable(totalBytesUp),human_readable(totalRateUp)) )
-	outp.println( ' <td nowrap=\"nowrap\" align="right">= %s @ %s/s</td>' % (human_readable(totalBytesDn),human_readable(totalRateDn)) )
-	outp.println( ' <td nowrap=\"nowrap\" align="right">&nbsp;</td>' )
-	outp.println( '</tr>' )
-	
-	# /totals
-	outp.println( '</table>' )
-	outp.println( '</body>' )
-	outp.println( '</html>' )
-	outp.close()
+	html.append( TemplatedFile( 'template.footer.html' ).substitute( mapping ) )
 
+	outp = SafeWriteFile('status.html')
+	outp.writeline( string.join(html) )
+	outp.close()
+	
 def process():
 	try:
 		doc = minidom.parse( TORRENT_XML )
-		processRss(doc)
-		processHtml(doc)
+		processDocument(doc)
 	except:
-		printmsg( 'Caught exception parsing document: %s' % str(sys.exc_info()[0]) )
+		printmsg( 'Caught exception parsing document: %s' % str(sys.exc_info()) )
 	return True
-
-def printmsg(msg,showDate=True):
-	if showDate:
-		t = time.strftime( '%Y-%m-%d @ %I:%M:%S %P' )
-		print '[%s]: %s' % (t, msg)
-	else:
-		print msg
 
 # main:
 sleepTime = 30
@@ -267,8 +227,8 @@ while cont:
 	except KeyboardInterrupt:
 		cont = False
 	#except:
-	#	print 'Unhandled exception: ', sys.exc_info()
-	#	cont = False
+	#       print 'Unhandled exception: ', sys.exc_info()
+	#       cont = False
 
 printmsg( 'Exiting gracefully!')
 exit()
