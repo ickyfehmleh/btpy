@@ -36,7 +36,7 @@ if not os.path.exists(USER_DL_DIR):
 
 #==============================================================================
 
-if len(argv) == 1:
+if len(argv) == 1 or argv[1] == '--help':
 	print '%s will allow you to download a torrent without stopping it.' % argv[0]
 	print
 	print 'USAGE: %s file1.torrent ... fileN.torrent' % argv[0]

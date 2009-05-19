@@ -43,8 +43,12 @@ def allFilesFromTorrentInfo( info ):
 def touchAllTorrentFiles(info,torrentDir):
 	for tf in allFilesFromTorrentInfo(info):
 		fp = os.path.join( torrentDir, tf )
+		printmsg( 'touchAllTorrentFiles: about to touch "%s"' % fp )
 		if os.path.exists(fp):
 			os.utime( fp, None )
+			printmsg( 'Touched %s' % fp )
+	os.utime( torrentDir )
+	printmsg( 'Touched %s' % torrentDir )
 
 def isTorrentProcessing(hash):
 	if isTorrentHashActive(hash):
@@ -60,7 +64,10 @@ def usernameForUID(uid):
 def printmsg(msg,showDate=True):
 	if showDate:
 		t = time.strftime( '%Y-%m-%d @ %I:%M:%S %P' )
+		f = open( os.path.join(DATA_DIR, 'autostopd.log'), 'a' )
 		print '[%s]: %s' % (t, msg)
+		f.write( '[%s]: %s\n' % (t,msg) )
+		f.close()
 	else:
 		print msg
 
@@ -87,7 +94,7 @@ def process():
 			autostopFile = os.path.join( AUTOSTOPD_DIR, hash ) + '.xml'
 
 			# should we even operate on it?  is it completed?
-			if fsize > bytesDn:
+			if findNodeName( torrent, 'status' ) != "seeding":
 				continue
 
 			# any requests for this?

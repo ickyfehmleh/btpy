@@ -1,0 +1,76 @@
+DOCUMENTATION
+=============
+
+/share/torrents/bin/cleartorrents
+
+Cleartorrents will, as the name implies, clear torrents from your 
+~/torrents.list file.  /share/torrents/bin/stop appends to ~/torrents.list,
+and cleartorrents removes from torrents.list.  It is important that you call
+cleartorrents after downloading files, as this marks them for expiration by
+moving them to the 'expired' directory, /share/expired.  Cleartorrents will
+maintain a file in your home directory called '.fetched_files'.  You can use
+this file and ~/torrents.list to automate downloads to your local machine.
+
+USAGE: 
+cleartorrents <file1> ... <fileN>
+cleartorrents
+
+========================================================================
+
+/share/torrents/bin/findexpired
+
+Findexpired will expire (permanently remove) old, expired torrents that nobody
+wants.  It is a cronned script that only root can run.
+
+========================================================================
+
+/share/torrents/bin/printlink
+
+Printlink will let you download a torrent that, while completed, you still
+want to seed.  Printlink will make hardlinks to the files in the torrent and
+emit a path that you can use to download those files from.  This path will
+be '/share/torrents/<YOUR_UID>/<filez>'.  It is important that you call
+'cleartorrents' after downloading these files.
+
+USAGE: 
+printlink <file1>.torrent ... <fileN>.torrent
+
+========================================================================
+/share/torrents/bin/showdownloads
+
+Showdownloads simply shows what's being downloaded and the filesize.
+
+USAGE: 
+showdownloads
+
+========================================================================
+/share/torrents/bin/start
+
+Start will, as its name implies, start downloading a torrent.  You can
+specify a URL to fetch, a cookies file to use for authentication
+(defaults to ~/.btrss/cookies.txt), and whether or not to force the 
+download.  Start consults a list of all the torrents that have been 
+downloaded.  For older torrents that have been expired, it may be necessary
+to force the download.  You can do this by passing off the "-f" option to
+start.
+
+USAGE:
+start [--force] [-f] [--cookies=<PATH>] <file/url1> ... <file/urlN>
+
+========================================================================
+/share/torrents/bin/stop
+
+Stop will stop a torrent, moving the contents from the incoming directory
+to wherever you happen to be residing at the time.  It will also append to
+your ~/torrents.list file for automation purposes.  Stop also appends to a
+list of all the torrents downloaded so users don't download the same torrent
+twice.  Stop can optionally pause a torrent by passing off the "-p" flag.
+Pausing a torrent will keep the contents in the incoming directory but stop
+seeding, useful if the original seed disappears and you find yourself 
+uploading gigs and gigs while not receiving anything in return.  Stop can also
+flat out delete a torrent and its contents by passing off the "-d" flag, 
+useful if the original seeder goes away permanently or the torrent is 
+removed.
+
+USAGE: 
+stop [--delete] [-d] [--pause] [-p] <file1> ... <fileN>

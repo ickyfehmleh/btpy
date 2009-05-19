@@ -26,8 +26,9 @@ import shelve
 import time
 import shutil
 from stat import *
-from common import * # FIXME import common for torrent.xml define?
+from common import *
 from BitTornado.bencode import bdecode
+from pysqlite2 import dbapi2 as sqlite
 
 assert sys.version >= '2', "Install Python 2.0 or greater"
 try:
@@ -70,7 +71,6 @@ Exceptions = []
 
 class XMLDisplayer:
 	outputXMLFile = TORRENT_XML
-	statsdbmFile = os.path.join(INCOMING_TORRENT_DIR,'.stats.db')
 	dbmstats = {}
 	livestats = {}
 	owners = {}
@@ -79,8 +79,7 @@ class XMLDisplayer:
 
 	def __init__(self,basedir):
 		dataDir = os.path.join(basedir,'.data')
-		#self.statsdbmFile = os.path.join( datadir,'stats.db')
-		#self.outputXMLFile = os.path.join( datadir, 'torrents.xml')
+		self.statsRecorder = SqliteStats(MASTER_HASH_LIST)
 
 	def mergedStats(self,key):
 		liveValue = self.livestats.get(key,'0:0')
@@ -94,6 +93,7 @@ class XMLDisplayer:
 	def cleanup(self):
 		self.saveStats()
 		os.unlink(self.outputXMLFile)
+		self.statsRecorder.close()
 
 	def saveStats(self):
 		for hash in self.livestats:
@@ -168,40 +168,10 @@ class XMLDisplayer:
 		return False
 
 	def saveStatsForHashAndUser(self,hash,uid,uploaded=0,downloaded=0):
-		s = shelve.open(self.statsdbmFile)
-		uid = str(uid)
-		if not s.has_key(hash):
-			s[hash] = dict()
-		uidMap = s[hash]
-		if not uidMap.has_key(uid):
-			uidMap[uid] = dict()
-		userinfo = uidMap[uid]
-		userinfo['dn'] = downloaded
-		userinfo['up'] = uploaded
-		uidMap[uid] = userinfo
-		s[hash] = uidMap
-		s.close()
+		self.statsRecorder.saveStatsForHashAndUser(hash,uid,uploaded,downloaded)
 
 	def getStoredStatsForHashAndUser(self,hash,uid):
-		s = shelve.open(self.statsdbmFile)
-		uid=str(uid)
-		up=0
-		dn=0
-		if not s.has_key(hash):
-			s[hash] = dict()
-		uidMap = s[hash]
-		if not uidMap.has_key(uid):
-			uidMap[uid] = dict()
-		userinfo = uidMap[uid]
-		if not userinfo.has_key('dn'):
-			userinfo['dn'] = 0
-		if not userinfo.has_key('up'):
-			userinfo['up'] = 0
-		dn = userinfo['dn']
-		up = userinfo['up']
-		s[hash] = uidMap
-		s.close()
-		return up,dn
+		return self.statsRecorder.getStoredStatsForHashAndUser(hash,uid)
 
 	def addTorrent(self,s):
 		(msg,path) = s.replace('"','').split( ' ')
