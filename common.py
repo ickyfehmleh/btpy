@@ -48,10 +48,10 @@ class SafeWriteFile(object):
 
 	def write(self,s):
 		self._fileHandle.write( s )
+		self._fileHandle.flush()
 
 	def writeline(self,s):
-		self.write( s )
-		self.write( '\n' )
+		self.write( s+'\n' )
 
 	def println(self,s):
 		self.writeline(s)
@@ -70,6 +70,7 @@ class MessageLogger(object):
 		t = time.strftime( '%Y-%m-%d @ %I:%M:%S %P' )
 		print '%s [%s]: %s' % (self._appName,t, msg)
 		self._logfile.write( '[%s]: %s\n' % (t,msg) )
+		self._logfile.flush()
 
 	def close(self):
 		self._logfile.close()
