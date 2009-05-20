@@ -14,6 +14,7 @@
 import sys
 import getopt
 from common import *
+import common
 from xml.dom import minidom, Node
 import glob
 import string
@@ -71,8 +72,6 @@ class AutostopDaemon(object):
 		self._log.printmsg(s)
 
 	def processLiveFiles(self):
-		self.printmsg('processLiveFiles()...')
-
 		# first find out if we even have pending requests
 		if len( glob.glob( os.path.join(AUTOSTOPD_DIR, '*.xml' ) ) ) == 0:
 			return
@@ -145,8 +144,6 @@ class AutostopDaemon(object):
 						if removeStopFile:
 							self.removeFile( stopFile )
 	def processExpiredFiles(self):
-		self.printmsg('processExpiredFiles()...')
-
 		# now cycle through all the files and make sure they're for 
 		# torrents that are still running
 		for root, dir, files in os.walk( AUTOSTOPD_DIR ):
@@ -164,7 +161,7 @@ class AutostopDaemon(object):
 					continue
 				except:
 					# dealing with a hashfile
-					if not self.isTorrentHashActive(hash):
+					if not isTorrentHashActive(hash):
 						self.printmsg( 'Removed stopped torrent %s' % stopFile )
 						self.removeFile( stopFile )
 
@@ -197,7 +194,8 @@ while cont:
 	except KeyboardInterrupt:
 		cont = False
 	except:
-		print 'Unhandled exception: ', sys.exc_info()[0]
+		print 'Unhandled exception: ', sys.exc_info()
+		cont = False
 
 p.printmsg( 'Exiting gracefully!')
 p.close()
