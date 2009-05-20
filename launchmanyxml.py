@@ -103,7 +103,7 @@ class XMLDisplayer:
 
 	def display(self, data):
 		try:
-			outputFile = SafeWriteFile(self.outputXMLFile)
+			outputFile = SafeWriteFile(self.outputXMLFile,0640)
 			outputFile.write( '<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n' )
 			outputFile.write( '<torrents>\n' )
 			totalBytesUp = 0
