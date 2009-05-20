@@ -175,7 +175,7 @@ class HtmlOutputter(object):
 	
 		html.append( TemplatedFile( os.path.join( TEMPLATE_DIR, 'template.footer.html' ) ).substitute( mapping ) )
 
-		outp = SafeWriteFile('status.html')
+		outp = SafeWriteFile('status.html', 0755)
 		outp.writeline( string.join(html) )
 		outp.close()
 	
