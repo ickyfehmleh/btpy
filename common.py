@@ -41,10 +41,11 @@ ACTIVE_USER_TORRENTS = os.path.expanduser( '~/.torrents.active' )
 
 # ======================================================================
 class SafeWriteFile(object):
-	def __init__(self,fileName):
+	def __init__(self,fileName,perms=0640):
 		self._fileName=str(fileName)
 		self._tempFile=str(tempfile.mktemp())
 		self._fileHandle = open( self._tempFile, 'w' )
+		self._permissions=perms
 
 	def write(self,s):
 		self._fileHandle.write( s )
@@ -59,6 +60,7 @@ class SafeWriteFile(object):
 	def close(self):
 		self._fileHandle.close()
 		shutil.move(self._tempFile, self._fileName)
+		os.chmod( self._fileName, self._permissions )
 
 # ======================================================================
 class MessageLogger(object):
