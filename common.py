@@ -174,11 +174,11 @@ def checkDownloadStatus(h):
 
 	try:	
 		# open master hashes
-		stats = SqliteStore(MASTER_HASH_LIST)
-		found = stats.isHashAlreadyDownloaded(h)
+		stats = SqliteStats(MASTER_HASH_LIST)
+		found = stats.isHashAlreadyDownloaded(str(h))
 		stats.close()
 	except:
-		print 'EXception caught!: %s' % exc_info()
+		print 'EXception caught!: %s' % str(exc_info())
 		found = True
 
 	return found
