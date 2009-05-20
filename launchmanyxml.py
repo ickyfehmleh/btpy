@@ -37,10 +37,6 @@ except:
 	True = 1
 	False = 0
 
-def printlog(msg):
-	t = time.strftime( '%Y-%m-%d @ %I:%M:%S %P' )
-	print '[%s]: %s' % (t, msg)
-
 def nameFromTorrent(fn):
 	try:
 		f = open( fn, 'rb' )
@@ -80,6 +76,7 @@ class XMLDisplayer:
 	def __init__(self,basedir):
 		dataDir = os.path.join(basedir,'.data')
 		self.statsRecorder = SqliteStats(MASTER_HASH_LIST)
+		self._log=MessageLogger('launchmany')
 
 	def mergedStats(self,key):
 		liveValue = self.livestats.get(key,'0:0')
@@ -94,6 +91,7 @@ class XMLDisplayer:
 		self.saveStats()
 		os.unlink(self.outputXMLFile)
 		self.statsRecorder.close()
+		self._log.close()
 
 	def saveStats(self):
 		for hash in self.livestats:
@@ -186,7 +184,7 @@ class XMLDisplayer:
 
 		storedUp,storedDn = self.getStoredStatsForHashAndUser(hash, ownerUID)
 		self.dbmstats[hash] = '%d:%d' % (storedUp,storedDn)
-		printlog( '%d added torrent [%s] hash=%s' % (ownerUID, name, hash) )
+		self.printlog( '%d added torrent [%s] hash=%s' % (ownerUID, name, hash) )
 
 	def dropTorrent(self,s):
 		(msg,path) = s.replace('"','').split( ' ')
@@ -200,7 +198,7 @@ class XMLDisplayer:
 		del self.livestats[hash]
 		del self.owners[hash]
 		del self.torrentNames[hash]
-		printlog( 'Stopped torrent \'%s\' [%s]' % (path,hash))
+		self.printlog( 'Stopped torrent \'%s\' [%s]' % (path,hash))
 			
 	def message(self, s):
 		if s.startswith( "added" ):
@@ -208,7 +206,7 @@ class XMLDisplayer:
 		elif s.startswith( "dropped" ):
 			self.dropTorrent(s)
 		else:
-			printlog( s )
+			self.printlog( s )
 
 	def printXML(self, fh, tag, value):
 		if tag == 'name':
@@ -220,6 +218,9 @@ class XMLDisplayer:
 	def exception(self, s):
 		Exceptions.append(s)
 		self.message('EXCEPTION CAUGHT: %s' % s)
+
+	def printlog(self,msg):
+		self._log.printmsg(msg)
 
 if __name__ == '__main__':
 	if argv[1:] == ['--version']:

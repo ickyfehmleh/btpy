@@ -38,6 +38,20 @@ ACTIVE_USER_TORRENTS = os.path.expanduser( '~/.torrents.active' )
 ## /constants
 
 # ======================================================================
+class MessageLogger(object):
+	def __init__(self,appName):
+		self._appName=appName
+		self._logfile=open( os.path.join(DATA_DIR, appName + '.log' ), 'a' )
+
+	def printmsg(msg):
+		t = time.strftime( '%Y-%m-%d @ %I:%M:%S %P' )
+		print '%s [%s]: %s' % (self._appName,t, msg)
+		self._logfile.write( '[%s]: %s\n' % (t,msg) )
+
+	def close(self):
+		self._logfile.close()
+
+# ======================================================================
 class SqliteStats(object):
 	def __init__(self,dbFile):
 		self._dbFile = dbFile + '.sqlite'
