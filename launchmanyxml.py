@@ -77,6 +77,7 @@ class XMLDisplayer:
 		dataDir = os.path.join(basedir,'.data')
 		self.statsRecorder = SqliteStats(MASTER_HASH_LIST)
 		self._log=MessageLogger('launchmany')
+		self._log.printmsg('Starting...')
 
 	def mergedStats(self,key):
 		liveValue = self.livestats.get(key,'0:0')
@@ -91,6 +92,7 @@ class XMLDisplayer:
 		self.saveStats()
 		os.unlink(self.outputXMLFile)
 		self.statsRecorder.close()
+		self._log.printmsg('STOPPING...')
 		self._log.close()
 
 	def saveStats(self):
@@ -101,8 +103,7 @@ class XMLDisplayer:
 
 	def display(self, data):
 		try:
-			tmpOutputFile = self.outputXMLFile+'.tmp'
-			outputFile = open( tmpOutputFile, 'w' )
+			outputFile = SafeWriteFile(self.outputXMLFile)
 			outputFile.write( '<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n' )
 			outputFile.write( '<torrents>\n' )
 			totalBytesUp = 0
@@ -154,7 +155,6 @@ class XMLDisplayer:
 
 			outputFile.write( '</torrents>\n' )
 			outputFile.close()
-			shutil.move(tmpOutputFile, self.outputXMLFile )
 		except:
 			self.message( 'Failed to write output XML!')
 			#self.message( sys.exc_info[0] )
