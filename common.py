@@ -14,15 +14,17 @@ import datetime
 from xml.dom import minidom, Node
 import string
 from pysqlite2 import dbapi2 as sqlite
+import tempfile
+import shutil
 
 ## constants
-INCOMING_TORRENT_DIR = '/share/incoming'
-COMPLETED_TORRENT_DIR = '/share/torrents'
-PERCENT_KEEP_FREE = .12
+#INCOMING_TORRENT_DIR = '/share/incoming'
+#COMPLETED_TORRENT_DIR = '/share/torrents'
+#PERCENT_KEEP_FREE = .12
 
-#PERCENT_KEEP_FREE = .30
-#INCOMING_TORRENT_DIR = '/share/test/monitored'
-#COMPLETED_TORRENT_DIR = '/share/test/monitored.done'
+PERCENT_KEEP_FREE = .30
+INCOMING_TORRENT_DIR = '/share/test/monitored'
+COMPLETED_TORRENT_DIR = '/share/test/monitored.done'
 
 DATA_DIR=os.path.join(INCOMING_TORRENT_DIR, '.data')
 TEMPLATE_DIR=os.path.join( DATA_DIR, 'templates' )
@@ -38,12 +40,33 @@ ACTIVE_USER_TORRENTS = os.path.expanduser( '~/.torrents.active' )
 ## /constants
 
 # ======================================================================
+class SafeWriteFile(object):
+	def __init__(self,fileName):
+		self._fileName=str(fileName)
+		self._tempFile=str(tempfile.mktemp())
+		self._fileHandle = open( self._tempFile, 'w' )
+
+	def write(self,s):
+		self._fileHandle.write( s )
+
+	def writeline(self,s):
+		self.write( s )
+		self.write( '\n' )
+
+	def println(self,s):
+		self.writeline(s)
+
+	def close(self):
+		self._fileHandle.close()
+		shutil.move(self._tempFile, self._fileName)
+
+# ======================================================================
 class MessageLogger(object):
 	def __init__(self,appName):
 		self._appName=appName
 		self._logfile=open( os.path.join(DATA_DIR, appName + '.log' ), 'a' )
 
-	def printmsg(msg):
+	def printmsg(self,msg):
 		t = time.strftime( '%Y-%m-%d @ %I:%M:%S %P' )
 		print '%s [%s]: %s' % (self._appName,t, msg)
 		self._logfile.write( '[%s]: %s\n' % (t,msg) )

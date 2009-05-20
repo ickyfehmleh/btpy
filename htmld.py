@@ -14,24 +14,6 @@ from string import Template
 import string
 import os.path
 import shutil
-import tempfile
-
-class SafeWriteFile(object):
-	def __init__(self,fileName):
-		self._fileName=str(fileName)
-		self._tempFile=str(tempfile.mktemp())
-		self._fileHandle = open( self._tempFile, 'w' )
-
-	def writeline(self,s):
-		self._fileHandle.write( s )
-		self._fileHandle.write( '\n' )
-
-	def println(self,s):
-		self.writeline(s)
-
-	def close(self):
-		self._fileHandle.close()
-		shutil.move(self._tempFile, self._fileName)
 
 class TemplatedFile(object):
 	def __init__(self,templateFile):
@@ -48,19 +30,6 @@ class TemplatedFile(object):
 		s = Template(self._contents).substitute(mapping)
 		return s
 ########################################################################
-
-def printmsg(msg,showDate=True,log=True):
-	appName = os.path.basename(sys.argv[0])
-	if showDate:
-		t = time.strftime( '%Y-%m-%d @ %I:%M:%S %P' )
-		print '%s [%s]: %s' % (appName,t, msg)
-
-		if log:
-			f = open( os.path.join(DATA_DIR, appName + '.log' ), 'a' )
-			f.write( '[%s]: %s\n' % (t,msg) )
-			f.close()
-	else:
-		print msg
 
 def boldTransferRate(n):
 	n = long(n)
@@ -101,128 +70,141 @@ def human_readable(n):
     return size
 ########################################################################
 
-def statsForTorrentNode(torrent):
-	mapping = dict()
-	torrentPath = findNodeName( torrent, 'fullpath' )
-	name = findNodeName( torrent, 'name' ).encode('utf-8')
-	fsize = int( findNodeName( torrent, 'filesize' ) )
-	hstBytesUp = int(findNodeName( torrent, 'totalUploadBytes'))
-	hstBytesDn = int(findNodeName( torrent, 'totalDownloadBytes'))
-	rateUp = float(findNodeName( torrent, 'uploadRate' ) )
-	rateDn = float(findNodeName( torrent, 'downloadRate' ) )
-	status = findNodeName( torrent, 'status' )
-	eta = findNodeName( torrent, 'eta' )
+class HtmlOutputter(object):
+	def __init__(self,outputHtmlFile):
+		self._htmlFile=outputHtmlFile
+		self._log=MessageLogger('htmld')
 
-	if hstBytesDn > 0:
-		mapping['ratio'] = '%.2f' % (float(hstBytesUp) / float(hstBytesDn))
-	else:
-		mapping['ratio'] = '&nbsp;'
+	def statsForTorrentNode(self,torrent):
+		mapping = dict()
+		torrentPath = findNodeName( torrent, 'fullpath' )
+		name = findNodeName( torrent, 'name' ).encode('utf-8')
+		fsize = int( findNodeName( torrent, 'filesize' ) )
+		hstBytesUp = int(findNodeName( torrent, 'totalUploadBytes'))
+		hstBytesDn = int(findNodeName( torrent, 'totalDownloadBytes'))
+		rateUp = float(findNodeName( torrent, 'uploadRate' ) )
+		rateDn = float(findNodeName( torrent, 'downloadRate' ) )
+		status = findNodeName( torrent, 'status' )
+		eta = findNodeName( torrent, 'eta' )
 
-	# 1:1 achieved?
-	if status == 'seeding':
-		if hstBytesUp > hstBytesDn:
-			mapping['tableRowClass'] = 'statusStoppable'
+		if hstBytesDn > 0:
+			mapping['ratio'] = '%.2f' % (float(hstBytesUp) / float(hstBytesDn))
 		else:
-			mapping['tableRowClass'] = 'statusSeeding'
-	else:
-		if eta == "complete!":
-			 mapping['tableRowClass'] = 'statusOther'
+			mapping['ratio'] = '&nbsp;'
+
+		# 1:1 achieved?
+		if status == 'seeding':
+			if hstBytesUp > hstBytesDn:
+				mapping['tableRowClass'] = 'statusStoppable'
+			else:
+				mapping['tableRowClass'] = 'statusSeeding'
 		else:
-			 mapping['tableRowClass'] = 'statusDownloading'
+			if eta == "complete!":
+				 mapping['tableRowClass'] = 'statusOther'
+			else:
+				 mapping['tableRowClass'] = 'statusDownloading'
 
-	mapping['torrentName'] = name
-	mapping['formattedFileSize'] = human_readable(fsize)
-	mapping['fileSize'] = fsize
+		mapping['torrentName'] = name
+		mapping['formattedFileSize'] = human_readable(fsize)
+		mapping['fileSize'] = fsize
 	
-	## "dlStatus"
-	mapping['status'] = status
-	mapping['progressPercentage'] = findNodeName(torrent,'progress')
-	mapping['eta'] = eta
-	mapping['errorMessage'] = findNodeName(torrent,'msg')
+		## "dlStatus"
+		mapping['status'] = status
+		mapping['progressPercentage'] = findNodeName(torrent,'progress')
+		mapping['eta'] = eta
+		mapping['errorMessage'] = findNodeName(torrent,'msg')
 
-	## down rate
-	mapping['bytesDown'] = hstBytesDn
-	mapping['formattedBytesDown'] = human_readable(hstBytesDn)
-	mapping['rateDown'] = rateDn
-	mapping['formattedRateDown'] = boldTransferRate(rateDn)
-	mapping['seedCount'] = int( findNodeName( torrent, 'seeds') )		
+		## down rate
+		mapping['bytesDown'] = hstBytesDn
+		mapping['formattedBytesDown'] = human_readable(hstBytesDn)
+		mapping['rateDown'] = rateDn
+		mapping['formattedRateDown'] = boldTransferRate(rateDn)
+		mapping['seedCount'] = int( findNodeName( torrent, 'seeds') )		
 
-	## up rate
-	mapping['bytesUp'] = hstBytesUp
-	mapping['formattedBytesUp'] = human_readable(hstBytesUp) 
-	mapping['rateUp'] = rateUp
-	mapping['formattedRateUp'] = boldTransferRate(rateUp)
-	mapping['peerCount'] = int( findNodeName( torrent, 'peers' ) )
+		## up rate
+		mapping['bytesUp'] = hstBytesUp
+		mapping['formattedBytesUp'] = human_readable(hstBytesUp) 
+		mapping['rateUp'] = rateUp
+		mapping['formattedRateUp'] = boldTransferRate(rateUp)
+		mapping['peerCount'] = int( findNodeName( torrent, 'peers' ) )
 
-	ownerUID = findNodeName(torrent,'owner')
-	hash = findNodeName(torrent,'hash')
-	stopRatio = ratioForHash(hash,ownerUID,autostopDir=AUTOSTOPD_DIR)
-	mapping['stopRatio'] = '%.2f' % stopRatio
+		ownerUID = findNodeName(torrent,'owner')
+		hash = findNodeName(torrent,'hash')
+		stopRatio = ratioForHash(hash,ownerUID,autostopDir=AUTOSTOPD_DIR)
+		mapping['stopRatio'] = '%.2f' % stopRatio
 
-	return mapping
-########################################################################
+		return mapping
 
-def processDocument(doc):
-	tsize = 0
+	def processDocument(self,doc):
+		tsize = 0
 	
-	totalBytesUp = 0
-	totalBytesDn = 0
-	totalRateUp  = 0
-	totalRateDn  = 0
-	totalIncoming = 0
+		totalBytesUp = 0
+		totalBytesDn = 0
+		totalRateUp  = 0
+		totalRateDn  = 0
+		totalIncoming = 0
 	
-	html = []
-	rss = []
+		html = []
+		rss = []
 	
-	mapping = dict()
-	mapping['lastGeneratedDate'] = time.ctime()
+		mapping = dict()
+		mapping['lastGeneratedDate'] = time.ctime()
 	
-	html.append( TemplatedFile(os.path.join( TEMPLATE_DIR, 'template.header.html' ) ).substitute(mapping) )
-	#rss.append( TemplatedFile(os.path.join( TEMPLATE_DIR, 'template.header.rss' ) ).substitute(mapping) )
-	tmpl = TemplatedFile(os.path.join( TEMPLATE_DIR, 'template.torrent.html' ) )
+		html.append( TemplatedFile(os.path.join( TEMPLATE_DIR, 'template.header.html' ) ).substitute(mapping) )
+		#rss.append( TemplatedFile(os.path.join( TEMPLATE_DIR, 'template.header.rss' ) ).substitute(mapping) )
+		tmpl = TemplatedFile(os.path.join( TEMPLATE_DIR, 'template.torrent.html' ) )
 	
-	for torrent in doc.documentElement.childNodes:
-		if torrent.nodeName == 'torrent':
-			stats = statsForTorrentNode(torrent)
-			totalIncoming += long(stats.get('fileSize',0))
-			totalRateUp += float(stats['rateUp'])
-			totalRateDn += float(stats['rateDown'])
-			totalBytesUp += long(stats['bytesUp'])
-			totalBytesDn += long(stats['bytesDown'])
+		for torrent in doc.documentElement.childNodes:
+			if torrent.nodeName == 'torrent':
+				stats = self.statsForTorrentNode(torrent)
+				totalIncoming += long(stats.get('fileSize',0))
+				totalRateUp += float(stats['rateUp'])
+				totalRateDn += float(stats['rateDown'])
+				totalBytesUp += long(stats['bytesUp'])
+				totalBytesDn += long(stats['bytesDown'])
 	
-			html.append( tmpl.substitute(stats) )
+				html.append( tmpl.substitute(stats) )
 	
-	## footers
-	mapping = dict()
-	mapping['formattedTotalBytes'] = human_readable(totalIncoming)
-	mapping['formattedTotalBytesUp'] = human_readable(totalBytesUp)
-	mapping['formattedTotalRateUp'] = human_readable(totalRateUp)
-	mapping['formattedTotalBytesDown'] = human_readable(totalBytesDn)
-	mapping['formattedTotalRateDown'] = human_readable(totalRateDn)
+		## footers
+		mapping = dict()
+		mapping['formattedTotalBytes'] = human_readable(totalIncoming)
+		mapping['formattedTotalBytesUp'] = human_readable(totalBytesUp)
+		mapping['formattedTotalRateUp'] = human_readable(totalRateUp)
+		mapping['formattedTotalBytesDown'] = human_readable(totalBytesDn)
+		mapping['formattedTotalRateDown'] = human_readable(totalRateDn)
 	
-	html.append( TemplatedFile( os.path.join( TEMPLATE_DIR, 'template.footer.html' ) ).substitute( mapping ) )
+		html.append( TemplatedFile( os.path.join( TEMPLATE_DIR, 'template.footer.html' ) ).substitute( mapping ) )
 
-	outp = SafeWriteFile('status.html')
-	outp.writeline( string.join(html) )
-	outp.close()
+		outp = SafeWriteFile('status.html')
+		outp.writeline( string.join(html) )
+		outp.close()
 	
-def process():
-	try:
-		doc = minidom.parse( TORRENT_XML )
-		processDocument(doc)
-	except:
-		printmsg( 'Caught exception parsing document: %s' % str(sys.exc_info()) )
-	return True
+	def process(self):
+		try:
+			doc = minidom.parse( TORRENT_XML )
+			self.processDocument(doc)
+		except:
+			self.printmsg( 'Caught exception parsing document: %s' % str(sys.exc_info()) )
+		return True
+
+	def printmsg(self,s):
+		self._log.printmsg(s)
+
+	def close(self):
+		self._log.close()
+############################################################################################################
 
 # main:
 sleepTime = 30
-printmsg( 'Will sleep for %d secs' % sleepTime)
 
 cont = True
+OUTPUT_FILE='status.html'
+p = HtmlOutputter(OUTPUT_FILE)
+p.printmsg('Outputting to %s' % OUTPUT_FILE)
 
 while cont:
 	try:
-		cont = process()
+		cont = p.process()
 		time.sleep(sleepTime)
 	except KeyboardInterrupt:
 		cont = False
@@ -230,5 +212,6 @@ while cont:
 	#       print 'Unhandled exception: ', sys.exc_info()
 	#       cont = False
 
-printmsg( 'Exiting gracefully!')
+p.printmsg( 'Exiting gracefully!')
+p.close()
 exit()
