@@ -121,7 +121,7 @@ class SqliteStats(object):
 # ======================================================================
 # write an array to a file
 def writeArrayToFile(array,fileName,newline=True):
-	f = open( fileName, 'w' )
+	f = SafeWriteFile( fileName, 0600 )
 
 	for line in array:
 		f.write( line )
