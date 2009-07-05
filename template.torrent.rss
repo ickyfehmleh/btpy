@@ -1,0 +1,13 @@
+	<item>
+		<title><![CDATA[${name}]]></title>
+		<author>htmld</author>
+		<pubDate>${lastGeneratedDate}</pubDate>
+		<link>http://nowhere?hash=${hash}</link>
+		<description>
+			${status} ${progressPercentage} 
+			:
+			${formattedBytesUp} @ ${formattedRateUp} up, 
+			${formattedBytesDown} @ ${formattedRateDown} dn, 
+			R: ${ratio}/${stopRatio}
+		</description>
+	</item>

@@ -98,7 +98,7 @@ for old in oldies:
 	canDelete = True
 
 	## TODO: consult a list to obtain torrent users
-	for user in ['howie', 'adam', 'nvilla']:
+	for user in ['howie']:
 		tfile = os.path.join( '/home', user, 'torrents.list')
 		
 		if fileNameExistsInFile( oldfn, tfile):

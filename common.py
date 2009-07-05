@@ -13,7 +13,9 @@ import re
 import datetime
 from xml.dom import minidom, Node
 import string
-import shelve
+from pysqlite2 import dbapi2 as sqlite
+import tempfile
+import shutil
 
 ## constants
 INCOMING_TORRENT_DIR = '/share/incoming'
@@ -25,6 +27,7 @@ PERCENT_KEEP_FREE = .12
 #COMPLETED_TORRENT_DIR = '/share/test/monitored.done'
 
 DATA_DIR=os.path.join(INCOMING_TORRENT_DIR, '.data')
+TEMPLATE_DIR=os.path.join( DATA_DIR, 'templates' )
 AUTOSTOPD_DIR=os.path.join( DATA_DIR, 'autostopd')
 TORRENT_XML=os.path.join(DATA_DIR, 'torrents.xml')
 MASTER_HASH_LIST = os.path.join( DATA_DIR,'stats.db' )
@@ -37,9 +40,88 @@ ACTIVE_USER_TORRENTS = os.path.expanduser( '~/.torrents.active' )
 ## /constants
 
 # ======================================================================
+class SafeWriteFile(object):
+	def __init__(self,fileName,perms=0640):
+		self._fileName=str(fileName)
+		self._tempFile=str(tempfile.mktemp())
+		self._fileHandle = open( self._tempFile, 'w' )
+		self._permissions=perms
+
+	def write(self,s):
+		self._fileHandle.write( s )
+		self._fileHandle.flush()
+
+	def writeline(self,s):
+		self.write( s+'\n' )
+
+	def println(self,s):
+		self.writeline(s)
+
+	def close(self):
+		self._fileHandle.close()
+		shutil.move(self._tempFile, self._fileName)
+		os.chmod( self._fileName, self._permissions )
+
+# ======================================================================
+class MessageLogger(object):
+	def __init__(self,appName):
+		self._appName=appName
+		self._logfile=open( os.path.join(DATA_DIR, appName + '.log' ), 'a' )
+
+	def printmsg(self,msg):
+		t = time.strftime( '%Y-%m-%d @ %I:%M:%S %P' )
+		print '%s [%s]: %s' % (self._appName,t, msg)
+		self._logfile.write( '[%s]: %s\n' % (t,msg) )
+		self._logfile.flush()
+
+	def close(self):
+		self._logfile.close()
+
+# ======================================================================
+class SqliteStats(object):
+	def __init__(self,dbFile):
+		self._dbFile = dbFile + '.sqlite'
+		self.statsDb = sqlite.connect(  self._dbFile )
+
+	def isHashAlreadyDownloaded(self,hash):
+		rv = False
+		c = self.statsDb.cursor()
+		c.execute( 'SELECT hash FROM user_data WHERE hash=?', (hash,))
+		row = c.fetchone()
+		if row:
+			rv = True
+		c.close()
+		return rv
+
+	def close(self):
+		self.statsDb.close()
+
+        def saveStatsForHashAndUser(self,hash,uid,uploaded=0,downloaded=0):
+		c = self.statsDb.cursor()
+		## will work as long as hash+uid == pk
+		c.execute( 'REPLACE INTO user_data (hash,uid,uploaded,downloaded) VALUES(?,?,?,?)',
+			(hash,str(uid),uploaded,downloaded))
+		c.close()
+		self.statsDb.commit()
+
+        def getStoredStatsForHashAndUser(self,hash,uid):
+		up = 0
+		dn = 0
+
+		c = self.statsDb.cursor()
+		c.execute( 'SELECT uploaded,downloaded FROM user_data WHERE uid=? AND hash=?', (uid,hash))
+		row = c.fetchone()
+
+		if row:
+		        up = long(row[0])
+		        dn = long(row[1])
+		c.close()
+		return up,dn
+
+# ======================================================================
 # write an array to a file
 def writeArrayToFile(array,fileName,newline=True):
-	f = open( fileName, 'w' )
+	f = SafeWriteFile( fileName, 0600 )
 
 	for line in array:
 		f.write( line )
@@ -132,12 +214,12 @@ def checkDownloadStatus(h):
 
 	try:	
 		# open master hashes
-		hashes =  shelve.open( MASTER_HASH_LIST, flag='r' )
-		found = hashes.has_key(h)
-		hashes.close()
+		stats = SqliteStats(MASTER_HASH_LIST)
+		found = stats.isHashAlreadyDownloaded(str(h))
+		stats.close()
 	except:
-		print 'EXception caught!: %s' % exc_info()
-		found = False
+		print 'EXception caught!: %s' % str(exc_info())
+		found = True
 
 	return found
 
