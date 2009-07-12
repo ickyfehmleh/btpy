@@ -50,6 +50,11 @@ for torrent_name in argv[1:]:
 	if metainfo_name == '':
 		print "Could not locate anything matching '%s', sorry!" % torrent_name
 		continue
+	# make sure we have a .torrent file
+	if not metainfo_name.endswith('.torrent'):
+		print '%s does not appear to be a torrent, skipping' % metainfo_name
+		continue
+
 	info = infoFromTorrent(metainfo_name)
 	info_hash = sha( bencode( info ) ).hexdigest()
 
