@@ -194,11 +194,12 @@ class XMLDisplayer:
 		(totUp,totDn) = self.mergedStats(hash)
 		self.saveStatsForHashAndUser(hash, uid, uploaded=totUp, downloaded=totDn)
 		## wipe all of our lookups
+		torrentName = self.torrentNames.get(hash,'UNKNOWN')
 		del self.dbmstats[hash]
 		del self.livestats[hash]
 		del self.owners[hash]
 		del self.torrentNames[hash]
-		self.printlog( 'Stopped torrent \'%s\' [%s]' % (path,hash))
+		self.printlog( 'Stopped torrent \'%s\' [%s]' % (torrentName,hash))
 			
 	def message(self, s):
 		if s.startswith( "added" ):
