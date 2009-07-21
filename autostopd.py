@@ -84,9 +84,9 @@ class AutostopDaemon(object):
 		for torrent in doc.documentElement.childNodes:
 			if torrent.nodeName == 'torrent':
 				hash = findNodeName( torrent, 'hash' )
-				bytesUp = int( findNodeName( torrent, 'totalUploadBytes' ) )
-				bytesDn = int( findNodeName( torrent, 'totalDownloadBytes' ) )
-				fsize = int( findNodeName( torrent, 'filesize' ) )
+				bytesUp = long( findNodeName( torrent, 'totalUploadBytes' ) )
+				bytesDn = long( findNodeName( torrent, 'totalDownloadBytes' ) )
+				fsize = long( findNodeName( torrent, 'filesize' ) )
 				torrentOwnerUID = findNodeName( torrent, 'owner' )
 				ownerDefaultsFile = os.path.join( AUTOSTOPD_DIR, torrentOwnerUID ) + '.xml'
 				autostopFile = os.path.join( AUTOSTOPD_DIR, hash ) + '.xml'
