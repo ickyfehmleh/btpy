@@ -71,6 +71,7 @@ class XMLDisplayer:
 	livestats = {}
 	owners = {}
 	torrentNames = {}
+	torrentDates = {}
 	outputFile = None
 
 	def __init__(self,basedir):
@@ -132,6 +133,7 @@ class XMLDisplayer:
 					self.printXML(outputFile, 'hash', hash)
 					self.printXML(outputFile, 'fullpath', fullPath)
 					self.printXML(outputFile, 'owner', self.owners.get(hash,'0'))
+					self.printXML(outputFile, 'startDate', self.torrentDates.get(hash,'unknown'))
 					self.printXML(outputFile,'status',status)
 					self.printXML(outputFile,'progress', progress)
 					self.printXML(outputFile,'peers', peers)
@@ -174,13 +176,16 @@ class XMLDisplayer:
 	def addTorrent(self,s):
 		(msg,path) = s.replace('"','').split( ' ')
 		(hash,ext) = os.path.basename(path).split('.')
-		ownerUID = os.stat(path).st_uid
+		fileStat = os.stat(path)
+		ownerUID = fileStat.st_uid
 		self.owners[hash] = str(ownerUID)
 		name = nameFromTorrent(path)
 		if name:
 			self.torrentNames[hash] = name
 		else:
 			name = 'Unavailable'
+		# get date added
+		torrentDates[hash] = time.ctime( fileStat.st_ctime )
 
 		storedUp,storedDn = self.getStoredStatsForHashAndUser(hash, ownerUID)
 		self.dbmstats[hash] = '%d:%d' % (storedUp,storedDn)
@@ -199,6 +204,7 @@ class XMLDisplayer:
 		del self.livestats[hash]
 		del self.owners[hash]
 		del self.torrentNames[hash]
+		del self.torrentDates[hash]
 		self.printlog( 'Stopped torrent \'%s\' [%s]' % (torrentName,hash))
 			
 	def message(self, s):
