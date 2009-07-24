@@ -70,7 +70,7 @@ class HtmlOutputter(object):
 		rateDn = float(findNodeName( torrent, 'downloadRate' ) )
 		status = findNodeName( torrent, 'status' )
 		eta = findNodeName( torrent, 'eta' )
-		started = long(findNodeName( torrent, 'started' ))
+		started = float(findNodeName( torrent, 'started' ))
 
 		if hstBytesDn > 0:
 			mapping['ratio'] = '%.2f' % (float(hstBytesUp) / float(hstBytesDn))
