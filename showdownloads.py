@@ -12,23 +12,6 @@ import math
 import pwd
 import getopt
 
-## stolen from btlaunchmanycurses.py
-def human_readable(n):
-    n = long(n)
-    unit = [' B', 'K', 'M', 'G', 'T', 'P', 'E', 'Z', 'Y']
-    i = 0
-    if (n > 999):
-        i = 1
-        while i + 1 < len(unit) and (n >> 10) >= 999:
-            i += 1
-            n >>= 10
-        n = float(n) / (1 << 10)
-    if i > 0:
-        size = '%.1f' % n + '%s' % unit[i]
-    else:
-        size = '%.0f' % n + '%s' % unit[i]
-    return size
-
 def ratioForHash(hash,uid):
 	ratio = float(0.0)
 
@@ -41,15 +24,6 @@ def ratioForHash(hash,uid):
 		if os.path.exists(stopFile):
 			ratio = ratioFromAutostopFile(stopFile)
 	return ratio
-
-def findNodeName(parentNode, name):
-	for childNode in parentNode.childNodes:
-		if name == childNode.nodeName:
-			content = []
-			for textNode in childNode.childNodes:
-				content.append( textNode.nodeValue )
-			return string.join( content )
-	return ''
 
 verbose = False
 tsize = 0
