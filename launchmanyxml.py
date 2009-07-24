@@ -133,11 +133,7 @@ class XMLDisplayer:
 					self.printXML(outputFile, 'hash', hash)
 					self.printXML(outputFile, 'fullpath', fullPath)
 					self.printXML(outputFile, 'owner', self.owners.get(hash,'0'))
-					#
-					torrentStartTime = long(self.torrentDates.get(hash,'0')))
-					self.printXML(outputFile, 'started', torrentStartTime )
-					self.printXML(outputFile, 'startDate', time.ctime( torrentStartTime ) )
-					#
+					self.printXML(outputFile, 'started', self.torrentDates.get(hash,'0') )
 					self.printXML(outputFile,'status',status)
 					self.printXML(outputFile,'progress', progress)
 					self.printXML(outputFile,'peers', peers)
