@@ -133,7 +133,11 @@ class XMLDisplayer:
 					self.printXML(outputFile, 'hash', hash)
 					self.printXML(outputFile, 'fullpath', fullPath)
 					self.printXML(outputFile, 'owner', self.owners.get(hash,'0'))
-					self.printXML(outputFile, 'startDate', self.torrentDates.get(hash,'unknown'))
+					#
+					torrentStartTime = long(self.torrentDates.get(hash,'0')))
+					self.printXML(outputFile, 'started', torrentStartTime )
+					self.printXML(outputFile, 'startDate', time.ctime( torrentStartTime ) )
+					#
 					self.printXML(outputFile,'status',status)
 					self.printXML(outputFile,'progress', progress)
 					self.printXML(outputFile,'peers', peers)
@@ -185,7 +189,7 @@ class XMLDisplayer:
 		else:
 			name = 'Unavailable'
 		# get date added
-		torrentDates[hash] = time.ctime( fileStat.st_ctime )
+		self.torrentDates[hash] = fileStat.st_ctime
 
 		storedUp,storedDn = self.getStoredStatsForHashAndUser(hash, ownerUID)
 		self.dbmstats[hash] = '%d:%d' % (storedUp,storedDn)
