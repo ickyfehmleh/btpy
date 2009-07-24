@@ -52,22 +52,6 @@ def ratioForHash(hash,uid,autostopDir=None):
 			ratio = ratioFromAutostopFile(stopFile)
 	return ratio
 
-## stolen from btlaunchmanycurses.py
-def human_readable(n):
-    n = long(n)
-    unit = [' B', 'K', 'M', 'G', 'T', 'P', 'E', 'Z', 'Y']
-    i = 0
-    if (n > 999):
-	i = 1
-	while i + 1 < len(unit) and (n >> 10) >= 999:
-	    i += 1
-	    n >>= 10
-	n = float(n) / (1 << 10)
-    if i > 0:
-	size = '%.1f' % n + '%s' % unit[i]
-    else:
-	size = '%.0f' % n + '%s' % unit[i]
-    return size
 ########################################################################
 
 class HtmlOutputter(object):
@@ -111,7 +95,10 @@ class HtmlOutputter(object):
 
 		## start date
 		mapping['started'] = started
-		mapping['startDate'] = time.ctime( started )
+		mapping['formattedStartDate'] = time.ctime( started )
+		age = time.time() - started
+		mapping['age'] = age
+		mapping['formattedAge'] = hours(age)
 	
 		## "dlStatus"
 		mapping['status'] = status
