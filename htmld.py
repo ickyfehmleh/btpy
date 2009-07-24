@@ -79,13 +79,14 @@ class HtmlOutputter(object):
 		mapping = dict()
 		torrentPath = findNodeName( torrent, 'fullpath' )
 		name = findNodeName( torrent, 'name' ).encode('utf-8')
-		fsize = int( findNodeName( torrent, 'filesize' ) )
-		hstBytesUp = int(findNodeName( torrent, 'totalUploadBytes'))
-		hstBytesDn = int(findNodeName( torrent, 'totalDownloadBytes'))
+		fsize = long( findNodeName( torrent, 'filesize' ) )
+		hstBytesUp = long(findNodeName( torrent, 'totalUploadBytes'))
+		hstBytesDn = long(findNodeName( torrent, 'totalDownloadBytes'))
 		rateUp = float(findNodeName( torrent, 'uploadRate' ) )
 		rateDn = float(findNodeName( torrent, 'downloadRate' ) )
 		status = findNodeName( torrent, 'status' )
 		eta = findNodeName( torrent, 'eta' )
+		started = long(findNodeName( torrent, 'started' ))
 
 		if hstBytesDn > 0:
 			mapping['ratio'] = '%.2f' % (float(hstBytesUp) / float(hstBytesDn))
@@ -107,6 +108,10 @@ class HtmlOutputter(object):
 		mapping['torrentName'] = name
 		mapping['formattedFileSize'] = human_readable(fsize)
 		mapping['fileSize'] = fsize
+
+		## start date
+		mapping['started'] = started
+		mapping['startDate'] = time.ctime( started )
 	
 		## "dlStatus"
 		mapping['status'] = status
