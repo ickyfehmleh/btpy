@@ -19,20 +19,17 @@ selectedHashes = []
 onlyForThisUser = True
 showTotals = True
 onlyActive = False
-
-# opts:
-# --verbose/-v  ==> verbose = True
-# --hash=<hash> ==> selectedHash = hash
-# --everyone/--all ==> show all downloads
+onlyStoppable = False
 
 # setup args
 try:
-	opts, args = getopt.getopt(argv[1:], 'vat', ['hash=','torrent=','for-me','all','everyone','transferring'])
+	opts, args = getopt.getopt(argv[1:], 'vats', ['stoppable','hash=','torrent=','for-me','all','everyone','transferring'])
 except getopt.GetoptError:
 	print 'Usage: %s [file1.torrent ... fileN.torrent]' % argv[0]
 	print 'Optional arguments: [--verbose/-v]: show stats'
 	print '--hash=<hash>: only show this hash (implies verbose)'
 	print '--all/-a: show all downloads'
+	print '--stoppable/-s: only show stoppable (1:1-seeded) torrents'
 	print '--transferring/-t: show only active downloads'
 	print 'If torrents are specified, only those stats will be shown.'
 	exit(2)
@@ -48,6 +45,8 @@ for o,a in opts:
 		onlyForThisUser = False
 	elif o in ('--transferring', '-t'):
 		onlyActive = True
+	elif o in ('--stoppable','-s'):
+		onlyStoppable=True
 
 for a in args:
 	if os.path.exists( a ) and a.endswith( '.torrent' ):
@@ -114,7 +113,12 @@ for torrent in doc.documentElement.childNodes:
 		if onlyActive and not isActive:
 			continue
 
-		print ''
+		if onlyStoppable and ratio < 1.0:
+			continue
+
+		if verbose:
+			print ''
+
 		if not onlyForThisUser:
 			ownerName = pwd.getpwuid(ownerUID)[0]
 			percentageComplete = findNodeName(torrent,'progress')
