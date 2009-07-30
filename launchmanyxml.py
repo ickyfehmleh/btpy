@@ -140,8 +140,8 @@ class XMLDisplayer:
 					self.printXML(outputFile,'seeds',seeds)
 					self.printXML(outputFile,'seedmsg', seedsmsg)
 					self.printXML(outputFile,'distcopies', dist)
-					self.printXML(outputFile,'uploadRate', uprate)
-					self.printXML(outputFile,'downloadRate', dnrate)
+					self.printXML(outputFile,'uploadRate', float(uprate))
+					self.printXML(outputFile,'downloadRate', float(dnrate))
 
 					# store session (livestats[]) up/dn bytes
 					self.printXML(outputFile, 'sessionUploadBytes', liveUp)
