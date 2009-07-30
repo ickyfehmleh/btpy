@@ -39,19 +39,6 @@ def boldTransferRate(n):
 		s = '<b>%s</b>' % s
 	return s
 
-def ratioForHash(hash,uid,autostopDir=None):
-	ratio = float(0.0)
-
-	stopFile = os.path.join(autostopDir,hash+'.xml')
-
-	if os.path.exists(stopFile):
-		ratio = ratioFromAutostopFile(stopFile)
-	else:
-		stopFile = os.path.join(autostopDir,uid+'.xml')
-		if os.path.exists(stopFile):
-			ratio = ratioFromAutostopFile(stopFile)
-	return ratio
-
 ########################################################################
 
 class HtmlOutputter(object):
