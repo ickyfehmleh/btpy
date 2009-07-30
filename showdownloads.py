@@ -45,8 +45,10 @@ for o,a in opts:
 		onlyForThisUser = False
 	elif o in ('--transferring', '-t'):
 		onlyActive = True
+		showTotals = False
 	elif o in ('--stoppable','-s'):
 		onlyStoppable=True
+		showTotals = False
 
 for a in args:
 	if os.path.exists( a ) and a.endswith( '.torrent' ):
