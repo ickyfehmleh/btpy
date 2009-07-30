@@ -30,6 +30,7 @@ tsize = 0
 selectedHashes = []
 onlyForThisUser = True
 showTotals = True
+onlyActive = False
 
 # opts:
 # --verbose/-v  ==> verbose = True
@@ -38,12 +39,13 @@ showTotals = True
 
 # setup args
 try:
-	opts, args = getopt.getopt(argv[1:], 'va', ['hash=','torrent=','for-me','all','everyone'])
+	opts, args = getopt.getopt(argv[1:], 'vat', ['hash=','torrent=','for-me','all','everyone','transferring'])
 except getopt.GetoptError:
 	print 'Usage: %s [file1.torrent ... fileN.torrent]' % argv[0]
 	print 'Optional arguments: [--verbose/-v]: show stats'
 	print '--hash=<hash>: only show this hash (implies verbose)'
 	print '--all/-a: show all downloads'
+	print '--transferring/-t: show only active downloads'
 	print 'If torrents are specified, only those stats will be shown.'
 	exit(2)
 
@@ -56,6 +58,8 @@ for o,a in opts:
 		showTotals = False
 	elif o in ('--everyone', '--all', '-a'):
 		onlyForThisUser = False
+	elif o in ('--transferring', '-t'):
+		onlyActive = True
 
 for a in args:
 	if os.path.exists( a ) and a.endswith( '.torrent' ):
@@ -71,6 +75,7 @@ if len(selectedHashes) > 0:
 	verbose = True
 	showTotals = False
 	onlyForThisUser = False
+	#onlyActive = False
 
 totalSpeedUp = 0
 totalSpeedDn = 0
@@ -109,9 +114,16 @@ for torrent in doc.documentElement.childNodes:
 		status = findNodeName( torrent, 'status' )
 		eta = findNodeName( torrent, 'eta' )
 		ratio = float(-0.00)
+		isActive = False
+		
+		if speedUp > 0.0 or speedDn > 0.0:
+			isActive = True
 
 		if bytesDn > 0:
 			ratio = float(bytesUp) / float(bytesDn)
+
+		if onlyActive and not isActive:
+			continue
 
 		if not onlyForThisUser:
 			ownerName = pwd.getpwuid(ownerUID)[0]
