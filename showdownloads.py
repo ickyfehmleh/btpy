@@ -93,8 +93,10 @@ for torrent in doc.documentElement.childNodes:
 		tsize += int( fileSize )
 		bytesUp = int(findNodeName( torrent, 'totalUploadBytes' ))
 		bytesDn = int(findNodeName( torrent, 'totalDownloadBytes' ))
-		speedUp = float(findNodeName(torrent, 'uploadRate'))
-		speedDn = float(findNodeName(torrent, 'downloadRate'))
+		rawSpeedUp = findNodeName(torrent, 'uploadRate')
+		rawSpeedDn = findNodeName(torrent, 'downloadRate')
+		speedUp = float(rawSpeedUp)
+		speedDn = float(rawSpeedDn)
 		progressPercentage = findNodeName(torrent,'progress')
 		totalBytesUp += bytesUp
 		totalBytesDn += bytesDn
@@ -105,9 +107,10 @@ for torrent in doc.documentElement.childNodes:
 		ratio = float(-0.00)
 		isActive = False
 		stopRatio = ratioForHash(hash,str(ownerUID))
-		
-		if speedUp > 0.0 or speedDn > 0.0:
-			isActive = True
+
+		if rawSpeedUp.count('-') == 0 and rawSpeedDn.count('-') == 0:
+			if speedUp > 0.0 or speedDn > 0.0:
+				isActive = True
 
 		if bytesDn > 0:
 			ratio = float(bytesUp) / float(bytesDn)
