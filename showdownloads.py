@@ -11,19 +11,7 @@ import string
 import math
 import pwd
 import getopt
-
-def ratioForHash(hash,uid):
-	ratio = float(0.0)
-
-	stopFile = os.path.join(AUTOSTOPD_DIR,hash+'.xml')
-		
-	if os.path.exists(stopFile):
-		ratio = ratioFromAutostopFile(stopFile)
-	else:
-		stopFile = os.path.join(AUTOSTOPD_DIR,uid+'.xml')
-		if os.path.exists(stopFile):
-			ratio = ratioFromAutostopFile(stopFile)
-	return ratio
+import time
 
 verbose = False
 tsize = 0
@@ -74,15 +62,15 @@ doc = minidom.parse( TORRENT_XML )
 if len(selectedHashes) > 0:
 	verbose = True
 	showTotals = False
-	onlyForThisUser = False
+	onlyForThisUser = True
 	#onlyActive = False
 
 totalSpeedUp = 0
 totalSpeedDn = 0
 totalBytesUp = 0
 totalBytesDn = 0
-
-print ''
+numMatches = 0
+#print ''
 
 for torrent in doc.documentElement.childNodes:
 	if torrent.nodeName == 'torrent':
@@ -115,6 +103,7 @@ for torrent in doc.documentElement.childNodes:
 		eta = findNodeName( torrent, 'eta' )
 		ratio = float(-0.00)
 		isActive = False
+		stopRatio = ratioForHash(hash,str(ownerUID))
 		
 		if speedUp > 0.0 or speedDn > 0.0:
 			isActive = True
@@ -125,6 +114,7 @@ for torrent in doc.documentElement.childNodes:
 		if onlyActive and not isActive:
 			continue
 
+		print ''
 		if not onlyForThisUser:
 			ownerName = pwd.getpwuid(ownerUID)[0]
 			percentageComplete = findNodeName(torrent,'progress')
@@ -134,9 +124,12 @@ for torrent in doc.documentElement.childNodes:
 			else:
 				print '%s: %s [%s]' % (ownerName, name, fsize)
 		else:
-			print '%s [%s] (%.2f)' % (name, fsize,ratio)
+			print '%s [%s] (%.2f/%.2f)' % (name, fsize,ratio,stopRatio)
 
 		if verbose:
+			numMatches = numMatches + 1
+			started = float(findNodeName(torrent,'started'))
+			startDate = time.ctime( started )
 			if status != "seeding":
 				if eta == "complete!":
 					print 'Status: %s (%s)' % (status, findNodeName( torrent, 'progress' ))
@@ -145,12 +138,12 @@ for torrent in doc.documentElement.childNodes:
 					print 'ETA: %s' % eta
 					if len(errMsg) > 0:
 						print 'ERROR: %s' % errMsg
-			print 'Uploaded: %s, downloaded: %s [Ratio: %.2f, stop @%.2f]' % (human_readable(bytesUp), human_readable(bytesDn), ratio,ratioForHash(hash,str(ownerUID)))
-			print ''
-
-if verbose:
-	print '%s @ %s/s up, %s @ %s/s dn' % (human_readable(totalBytesUp), human_readable(totalSpeedUp), human_readable(totalBytesDn), human_readable(totalSpeedDn))
+			print '%s @ %s/s uploaded, %s @ %s/s downloaded' % (human_readable(bytesUp), human_readable(speedUp), human_readable(bytesDn), human_readable(speedDn))
 
 if showTotals:
 	print
-	print 'A total of %s is being downloaded' % human_readable(tsize)
+
+	if verbose and numMatches > 3:
+		print 'Total of %s being downloaded, %s @ %s/s up, %s @ %s/s dn' % (human_readable(tsize), human_readable(totalBytesUp), human_readable(totalSpeedUp), human_readable(totalBytesDn), human_readable(totalSpeedDn))
+	else:
+		print 'A total of %s is being downloaded' % human_readable(tsize)
