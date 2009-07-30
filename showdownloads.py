@@ -143,7 +143,7 @@ for torrent in doc.documentElement.childNodes:
 if showTotals:
 	print
 
-	if verbose and numMatches > 3:
+	if verbose:
 		print 'Total of %s being downloaded, %s @ %s/s up, %s @ %s/s dn' % (human_readable(tsize), human_readable(totalBytesUp), human_readable(totalSpeedUp), human_readable(totalBytesDn), human_readable(totalSpeedDn))
 	else:
 		print 'A total of %s is being downloaded' % human_readable(tsize)
