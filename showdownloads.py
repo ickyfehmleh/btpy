@@ -69,7 +69,9 @@ totalSpeedDn = 0
 totalBytesUp = 0
 totalBytesDn = 0
 numMatches = 0
-#print ''
+
+if not verbose:
+	print ''
 
 for torrent in doc.documentElement.childNodes:
 	if torrent.nodeName == 'torrent':
