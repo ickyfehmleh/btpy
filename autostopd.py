@@ -194,8 +194,8 @@ while cont:
 	except KeyboardInterrupt:
 		cont = False
 	except:
-		print 'Unhandled exception: ', sys.exc_info()
-		cont = False
+		p.printmsg( 'Unhandled exception: ', sys.exc_info() )
+		#cont = False
 
 p.printmsg( 'Exiting gracefully!')
 p.close()
