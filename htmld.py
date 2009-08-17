@@ -14,6 +14,7 @@ from string import Template
 import string
 import os.path
 import shutil
+import pwd
 
 class TemplatedFile(object):
 	def __init__(self,templateFile):
@@ -107,7 +108,12 @@ class HtmlOutputter(object):
 		mapping['formattedRateUp'] = boldTransferRate(rateUp)
 		mapping['peerCount'] = int( findNodeName( torrent, 'peers' ) )
 
+		## owner
 		ownerUID = findNodeName(torrent,'owner')
+		ownerName = pwd.getpwuid(ownerUID)[0]
+		mapping['ownerUID'] = ownerUID
+		mapping['ownerName'] = ownerName
+
 		hash = findNodeName(torrent,'hash')
 		stopRatio = ratioForHash(hash,ownerUID,autostopDir=AUTOSTOPD_DIR)
 		mapping['stopRatio'] = '%.2f' % stopRatio
