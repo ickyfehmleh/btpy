@@ -58,7 +58,7 @@ class HtmlOutputter(object):
 		rateDn = float(findNodeName( torrent, 'downloadRate' ) )
 		status = findNodeName( torrent, 'status' )
 		eta = findNodeName( torrent, 'eta' )
-		started = float(findNodeName( torrent, 'started' ))
+		started = findNodeName( torrent, 'started' )
 
 		if hstBytesDn > 0:
 			mapping['ratio'] = '%.2f' % (float(hstBytesUp) / float(hstBytesDn))
@@ -82,11 +82,18 @@ class HtmlOutputter(object):
 		mapping['fileSize'] = fsize
 
 		## start date
-		mapping['started'] = started
-		mapping['formattedStartDate'] = time.ctime( started )
-		age = time.time() - started
-		mapping['age'] = age
-		mapping['formattedAge'] = hours(age)
+		if started is not None and started != '':
+			started = float(started)
+			mapping['started'] = started
+			mapping['formattedStartDate'] = time.ctime( started )
+			age = time.time() - started
+			mapping['age'] = age
+			mapping['formattedAge'] = hours(age)
+		else:
+			mapping['age'] = 'UNKNOWN'
+			mapping['started'] = 0.0
+			mapping['formattedStartDate'] = 'UNKNOWN'
+			mapping['formattedAge'] = 'UNKNOWN'
 	
 		## "dlStatus"
 		mapping['status'] = status
@@ -99,23 +106,23 @@ class HtmlOutputter(object):
 		mapping['formattedBytesDown'] = human_readable(hstBytesDn)
 		mapping['rateDown'] = rateDn
 		mapping['formattedRateDown'] = boldTransferRate(rateDn)
-		mapping['seedCount'] = int( findNodeName( torrent, 'seeds') )		
+		mapping['seedCount'] = findNodeName( torrent, 'seeds')
 
 		## up rate
 		mapping['bytesUp'] = hstBytesUp
 		mapping['formattedBytesUp'] = human_readable(hstBytesUp) 
 		mapping['rateUp'] = rateUp
 		mapping['formattedRateUp'] = boldTransferRate(rateUp)
-		mapping['peerCount'] = int( findNodeName( torrent, 'peers' ) )
+		mapping['peerCount'] = findNodeName( torrent, 'peers' )
 
 		## owner
-		ownerUID = findNodeName(torrent,'owner')
+		ownerUID = int(findNodeName(torrent,'owner'))
 		ownerName = pwd.getpwuid(ownerUID)[0]
 		mapping['ownerUID'] = ownerUID
 		mapping['ownerName'] = ownerName
 
 		hash = findNodeName(torrent,'hash')
-		stopRatio = ratioForHash(hash,ownerUID,autostopDir=AUTOSTOPD_DIR)
+		stopRatio = ratioForHash(hash,str(ownerUID))
 		mapping['stopRatio'] = '%.2f' % stopRatio
 
 		return mapping
@@ -143,10 +150,10 @@ class HtmlOutputter(object):
 			if torrent.nodeName == 'torrent':
 				stats = self.statsForTorrentNode(torrent)
 				totalIncoming += long(stats.get('fileSize',0))
-				totalRateUp += float(stats['rateUp'])
-				totalRateDn += float(stats['rateDown'])
-				totalBytesUp += long(stats['bytesUp'])
-				totalBytesDn += long(stats['bytesDown'])
+				totalRateUp += float(stats.get('rateUp',0))
+				totalRateDn += float(stats.get('rateDown',0))
+				totalBytesUp += long(stats.get('bytesUp',0))
+				totalBytesDn += long(stats.get('bytesDown',0))
 	
 				html.append( tmpl.substitute(stats) )
 	
@@ -167,9 +174,10 @@ class HtmlOutputter(object):
 	def process(self):
 		try:
 			doc = minidom.parse( TORRENT_XML )
-			self.processDocument(doc)
 		except:
+			print sys.exc_info()
 			self.printmsg( 'Caught exception parsing document: %s' % str(sys.exc_info()) )
+		self.processDocument(doc)
 		return True
 
 	def printmsg(self,s):
@@ -180,7 +188,7 @@ class HtmlOutputter(object):
 ############################################################################################################
 
 # main:
-sleepTime = 30
+sleepTime = int(10)
 
 cont = True
 OUTPUT_FILE='status.html'
@@ -193,8 +201,8 @@ while cont:
 		time.sleep(sleepTime)
 	except KeyboardInterrupt:
 		cont = False
-	#except:
-	#       print 'Unhandled exception: ', sys.exc_info()
+	except:
+		printmsg( 'Unhandled exception: %s ' % str(sys.exc_info()) )
 	#       cont = False
 
 p.printmsg( 'Exiting gracefully!')
