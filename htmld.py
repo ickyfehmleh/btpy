@@ -202,7 +202,7 @@ while cont:
 	except KeyboardInterrupt:
 		cont = False
 	except:
-		printmsg( 'Unhandled exception: %s ' % str(sys.exc_info()) )
+		p.printmsg( 'Unhandled exception: %s ' % str(sys.exc_info()) )
 	#       cont = False
 
 p.printmsg( 'Exiting gracefully!')
