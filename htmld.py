@@ -174,10 +174,10 @@ class HtmlOutputter(object):
 	def process(self):
 		try:
 			doc = minidom.parse( TORRENT_XML )
+			self.processDocument(doc)
 		except:
 			print sys.exc_info()
 			self.printmsg( 'Caught exception parsing document: %s' % str(sys.exc_info()) )
-		self.processDocument(doc)
 		return True
 
 	def printmsg(self,s):
