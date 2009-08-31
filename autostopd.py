@@ -42,9 +42,14 @@ def allFilesFromTorrentInfo( info ):
 
 ################################################################################
 class AutostopDaemon(object):
+	_notifyCommand=None
+
 	def __init__(self):
 		self._log=MessageLogger('autostopd')
 		self.printmsg('Starting...')
+
+	def setNotifyCommand(self,cmd):
+		self._notifyCommand=cmd
 
 	def touchFile(self,file):
 		if os.path.exists(file):
@@ -70,6 +75,30 @@ class AutostopDaemon(object):
 
 	def printmsg(self,s):
 		self._log.printmsg(s)
+
+	def stopTorrent(self,torrentNode,stopFile,removeStopFile=False):
+		liveTorrent = findNodeName( torrentNode, 'fullpath' )
+		info = infoFromTorrent( liveTorrent )
+		hash = findNodeName( torrentNode, 'hash' )
+		bytesUp = long( findNodeName( torrentNode, 'totalUploadBytes' ) )
+		bytesDn = long( findNodeName( torrentNode, 'totalDownloadBytes' ) )
+		fsize = long( findNodeName( torrentNode, 'filesize' ) )
+		actionRatio = float(ratioFromAutostopFile( stopFile ))
+		currentRatio = float( bytesUp ) / float( bytesDn )
+
+		if info == '':
+			self.printmsg( 'Stopped hash %s due to ratio [%.2f] > desired ratio [%.2f]' % (hash, currentRatio, actionRatio))
+		else:
+			self.printmsg( 'Stopped "%s" (hash: %s) due to ratio [%.2f] > desired ratio [%.2f]' % (info['name'], hash, currentRatio, actionRatio))
+
+		if os.path.exists( liveTorrent ):
+			self.removeFile( liveTorrent )
+			self.touchAllTorrentFiles(info, os.path.join( INCOMING_TORRENT_DIR, hash) )
+		else:
+			self.printmsg( 'Error: %s does not exist' % liveTorrent )
+
+		if removeStopFile:
+			self.removeFile( stopFile )
 
 	def processLiveFiles(self):
 		# first find out if we even have pending requests
@@ -128,21 +157,9 @@ class AutostopDaemon(object):
 					currentRatio = float( bytesUp ) / float( bytesDn )
 
 					if currentRatio > actionRatio and actionRatio > 0.0:
-						info = infoFromTorrent( liveTorrent )
+						self.stopTorrent(torrent,stopFile,removeStopFile)
 
-						if info == '':
-							self.printmsg( 'Stopped hash %s due to ratio [%.2f] > desired ratio [%.2f]' % (hash, currentRatio, actionRatio))
-						else:
-							self.printmsg( 'Stopped "%s" (hash: %s) due to ratio [%.2f] > desired ratio [%.2f]' % (info['name'], hash, currentRatio, actionRatio))
 
-						if os.path.exists( liveTorrent ):
-							self.removeFile( liveTorrent )
-							self.touchAllTorrentFiles(info, os.path.join( INCOMING_TORRENT_DIR, hash) )
-						else:
-							self.printmsg( 'Error: %s does not exist' % liveTorrent )
-
-						if removeStopFile:
-							self.removeFile( stopFile )
 	def processExpiredFiles(self):
 		# now cycle through all the files and make sure they're for 
 		# torrents that are still running
@@ -194,7 +211,8 @@ while cont:
 	except KeyboardInterrupt:
 		cont = False
 	except:
-		p.printmsg( 'Unhandled exception: ', sys.exc_info() )
+		s = 'Unhandled exception: ', sys.exc_info()
+		p.printmsg( s )
 		#cont = False
 
 p.printmsg( 'Exiting gracefully!')
