@@ -74,7 +74,7 @@ class Autostopper(object):
 			f.write( '\t</stop>\n' )
 			f.write( '</autostop>\n' )
 			f.close()
-			os.chmod( autostopFile, 0640 )
+			os.chmod( autostopFile, 0660 )
 		except:
 			print 'Problem writing out this request!'
 			raise
