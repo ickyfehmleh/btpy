@@ -26,6 +26,7 @@ useSymlinks = False
 ## if false, copies torrent to incoming dir
 cookieFile = os.path.join(os.environ["HOME"], ".btrss", "cookies.txt" )
 forceDownload = False
+downloadOnly = False
 
 print
 
@@ -36,10 +37,11 @@ if not os.path.exists( os.path.join( AUTOSTOPD_DIR, str(os.getuid())+".xml" ) ):
 
 # setup args
 try:
-	opts, args = getopt.getopt(argv[1:], 'f', ['force', 'cookie='])
+	opts, args = getopt.getopt(argv[1:], 'fd', ['download','force', 'cookie='])
 except getopt.GetoptError:
 	print '%s [--force/-f] [--cookie=path] file1.torrent ... fileN.torrent' % argv[0]
 	print ''
+	print '--download/-d: Just download a torrent from a URL.'
 	print '--force/-f: if a file has already been downloaded, download it again'
 	print '--cookie=<path>: read Netscape-style cookies from <path>'
 	print '                 defaults to ~/.btrss/cookies.txt'
@@ -50,6 +52,8 @@ except getopt.GetoptError:
 for opt,arg in opts:
 	if opt in ("-f", "--force"):
 		forceDownload = True
+	if opt in ('-d','--download'):
+		downloadOnly = True
 	if opt == "--cookie":
 		cookieFile =  os.path.expandvars(os.path.expanduser(arg))
 
@@ -100,6 +104,9 @@ for metainfo_name in args:
 		of = open( filestr, "wb" )
 		of.write( f.read() )
 		of.close()
+		if downloadOnly:
+			print 'Saved %s as %s' % (metainfo_name,filestr)
+			continue
 		metainfo_name = filestr
 
 	# owners have to match
