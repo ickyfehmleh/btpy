@@ -154,7 +154,7 @@ for metainfo_name in args:
 					os.chmod( metainfo_name, 0640 )
 				else:
 					copy( metainfo_name, torrentName )
-					os.chmod( torrentName, 0640 )
+					os.chmod( torrentName, 0660 ) # needs to be writeable by tshare for autostopd
 
 				recordActiveTorrent( metainfo_name, info['name'], info_hash )
 				print 'Will begin downloading %s shortly.' % metainfo_name
