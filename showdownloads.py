@@ -56,7 +56,8 @@ for a in args:
 		if info == '':
 			print 'Failed to find anything matching %s' % (a)
 		else:
-			selectedHashes.append( sha( bencode( info  ) ).hexdigest() )
+			infHash = hashFromInfo( info )
+			selectedHashes.append( infHash )
 
 doc = minidom.parse( TORRENT_XML )
 

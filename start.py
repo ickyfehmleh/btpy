@@ -7,7 +7,6 @@
 
 from sys import *
 from os.path import *
-from sha import *
 from BitTornado.bencode import *
 import statvfs
 import os
@@ -118,7 +117,7 @@ for metainfo_name in args:
 	metainfo = bdecode(metainfo_file.read())
 	metainfo_file.close()
 	info = metainfo['info']
-	info_hash = sha( bencode( info  ) ).hexdigest()
+	info_hash = hashFromInfo(info) #sha( bencode( info  ) ).hexdigest()
 
 	# allowed tracker?
 	if not isTrackerAllowed( metainfo['announce'] ):

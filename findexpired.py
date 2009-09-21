@@ -5,7 +5,6 @@
 
 from sys import *
 from os.path import *
-from sha import *
 import os
 from shutil import *
 import datetime

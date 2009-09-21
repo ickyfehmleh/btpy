@@ -15,7 +15,6 @@ import time
 
 from sys import *
 from os.path import *
-from sha import *
 from BitTornado.bencode import *
 from shutil import *
 
@@ -56,7 +55,7 @@ for torrent_name in argv[1:]:
 		continue
 
 	info = infoFromTorrent(metainfo_name)
-	info_hash = sha( bencode( info ) ).hexdigest()
+	info_hash = hashFromInfo(info)
 
 	torrentName = os.path.join( INCOMING_TORRENT_DIR, info_hash )
 

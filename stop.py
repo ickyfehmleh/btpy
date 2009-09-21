@@ -14,7 +14,6 @@ import os
 import time
 import sys
 import os.path
-from sha import *
 from BitTornado.bencode import *
 from shutil import *
 import getopt
@@ -117,7 +116,7 @@ for torrent_name in args:
 		print 'Could not fetch info for %s' % metainfo_name
 		continue
 
-	info_hash = sha( bencode( info ) ).hexdigest()
+	info_hash = hashFromInfo(info) #sha( bencode( info ) ).hexdigest()
 
 	# figure out what the name of the torrent is
 	torrentPath = os.path.join( INCOMING_TORRENT_DIR, info_hash )
