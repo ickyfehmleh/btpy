@@ -6,7 +6,7 @@ import time
 
 from sys import *
 from os.path import *
-from sha import *
+import hashlib
 from BitTornado.bencode import *
 from shutil import *
 import re
@@ -314,7 +314,8 @@ def removeActiveTorrent(hash):
 #########################################################################
 # record a hash in our master hashlist file
 def recordDownloadedTorrent(info):
-	info_hash = sha( bencode( info  ) ).hexdigest()
+	## FIXME find the right method to call here
+	info_hash = hashlib.sha1( bencode( info  ) ).hexdigest()
 	removeActiveTorrent(info_hash)
 
 # ======================================================================
@@ -352,6 +353,9 @@ def infoFromTorrent(fn):
 	except:
 		return ''
 
+def hashFromInfo(info):
+	return hashlib.sha1( bencode( info ) ).hexdigest()
+
 # ======================================================================
 ## find a file in a torrent
 def findTorrent(s):
@@ -366,7 +370,7 @@ def findTorrent(s):
 				if file.find('.torrent', 0 ) != -1:
 					fn = os.path.join(INCOMING_TORRENT_DIR, file)
 					info = infoFromTorrent(fn)
-					info_hash = sha( bencode( info ) ).hexdigest()
+					info_hash = hashFromInfo(info) #sha( bencode( info ) ).hexdigest()
 
 					if info_hash == s:
 						return fn
