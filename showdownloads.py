@@ -90,7 +90,8 @@ for torrent in doc.documentElement.childNodes:
 		if onlyForThisUser and ownerUID != os.getuid():
 			continue
 
-		name = findNodeName( torrent, 'name' ).encode('utf-8')
+		nameUnicode = findNodeName( torrent, 'name' )
+		name = nameUnicode.encode('ascii','ignore')
 		fileSize = int(findNodeName( torrent, 'filesize' ))
 		fsize = human_readable( fileSize )
 		tsize += int( fileSize )
