@@ -50,7 +50,8 @@ class HtmlOutputter(object):
 	def statsForTorrentNode(self,torrent):
 		mapping = dict()
 		torrentPath = findNodeName( torrent, 'fullpath' )
-		name = findNodeName( torrent, 'name' ).encode('utf-8','ignore')
+		nameUnicode = findNodeName( torrent, 'name' )
+		name = nameUnicode.encode('ascii','ignore')
 		fsize = long( findNodeName( torrent, 'filesize' ) )
 		hstBytesUp = long(findNodeName( torrent, 'totalUploadBytes'))
 		hstBytesDn = long(findNodeName( torrent, 'totalDownloadBytes'))
