@@ -143,7 +143,7 @@ else:
 			print 'You do not own %s' % tfile
 			continue
 	
-		hash = sha( bencode( torrent ) ).hexdigest()
+		hash = hashFromInfo(torrent)  # sha( bencode( torrent ) ).hexdigest()
 		torrentName = torrent['name']
 	
 		# make a request to autostopd
