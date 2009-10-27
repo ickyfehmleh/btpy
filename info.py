@@ -41,7 +41,7 @@ for metainfo_name in args:
 	metainfo = bdecode(metainfo_file.read())
 	metainfo_file.close()
 	info = metainfo['info']
-	info_hash = sha( bencode( info  ) ).hexdigest()
+	info_hash = hashFromInfo(info)
 
 	if isTorrentHashActive(info_hash):
 		print '%s is a live torrent' % metainfo_name
