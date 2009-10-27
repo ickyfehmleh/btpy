@@ -176,6 +176,7 @@ class HtmlOutputter(object):
 		try:
 			doc = minidom.parse( TORRENT_XML )
 			self.processDocument(doc)
+			doc = None # force python to gc?
 		except:
 			print sys.exc_info()
 			self.printmsg( 'Caught exception parsing document: %s' % str(sys.exc_info()) )
