@@ -31,7 +31,7 @@ if len( sys.argv ) == 1:
 
 for currentArg in sys.argv[1:]:
 	fullPath = os.path.abspath( currentArg )
-	print 'Operating on %s' % currentArg
+	#print 'Operating on %s' % currentArg
 	
 	if not os.path.exists( os.path.abspath( currentArg ) ):
 		print '%s does not exist!' % currentArg
@@ -65,14 +65,14 @@ for currentArg in sys.argv[1:]:
 					if not os.path.exists( outputFile ):
 						#print 'os.link(%s,%s)' % (inputFile, outputFile)
 						os.link( inputFile, outputFile )
-			print localOutputDir
+			print 'Saved %s as %s' % (currentArg, localOutputDir)
 		else:
 			inputFile = os.path.abspath( currentArg )
 			outputLink = os.path.join( USER_DL_DIR, currentArg )
 			#print '### linking %s to %s' % (inputFile, outputLink )
 			try:
 				os.link( inputFile, outputLink )
-				print outputLink
+				print 'Saved %s as %s' % (currentArg, outputLink)
 			except:
 				print 'Could not save %s' % currentArg
 sys.exit()
