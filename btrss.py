@@ -29,7 +29,8 @@ import re
 import os
 import os.path
 import string
-from sha import *
+#from sha import *
+from hashlib import sha1 as sha
 from BitTornado.bencode import *
 import shutil
 import tempfile
