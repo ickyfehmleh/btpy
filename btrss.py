@@ -20,7 +20,7 @@
 #############################################################################
 
 import sys
-from pythonutils.pathutils import Lock, LockError, LockFile
+## author of pythonutils is a fucking idiot and cant write decent code
 import cookielib
 import urllib2
 from urllib import unquote_plus
@@ -69,18 +69,12 @@ def logTorrent(hash,title,url):
 	t = time.strftime( '%Y-%m-%d %I:%M:%S %P' ) 
 	logStr = "%s:%s:%s:%s" % (hash, t, title,url)
 
-	lock = Lock( DATA_FILE, timeout=5, step=0.1 )
-	lock.lock()
-
 	printdebug('Writing info to DATA_FILE %s' % DATA_FILE )
 	
 	df = open( DATA_FILE, 'a' )
 	df.write( logStr )
 	df.write( '\n' )
 	df.close()
-	
-	lock.unlock()
-
 ########################################################################
 # print a log line
 def printdebug(str):
@@ -164,8 +158,7 @@ def infoHashFromTorrent(fn):
 ########################################################################
 # function to see if we've already grabbed the hash
 def checkDownloadStatusForURL( url ):
-	torrentLog = LockFile( DATA_FILE, mode='r', timeout=5, step=0.1 )
-	#torrentLog = open( DATA_FILE, 'r')
+	torrentLog = open( DATA_FILE, 'r')
 	lines = torrentLog.readlines()
 	torrentLog.close()
 
@@ -180,7 +173,7 @@ def checkDownloadStatusForURL( url ):
 ########################################################################
 # should really be combined with the above method i think
 def checkDownloadStatusForHash(hash):
-	torrentLog = LockFile( DATA_FILE, mode='r', timeout=5, step=0.1 )
+	torrentLog = open( DATA_FILE, 'r' )
 	lines = torrentLog.readlines()
 	torrentLog.close()
 
