@@ -101,5 +101,6 @@ for torrent_name in argv[1:]:
 if len(outputs) > 0:
 	stderr.write( '\n*** Please remember to use cleartorrents after downloading ***\n' )
 	for file in outputs:
-		stderr.write( '/share/torrents/bin/cleartorrents %s\n' % file )
+		recordLocalTorrent( file )
+		stderr.write( '/share/bin/cleartorrents %s\n' % file )
 	stderr.flush()

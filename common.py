@@ -33,12 +33,23 @@ AUTOSTOPD_DIR=os.path.join( DATA_DIR, 'autostopd')
 TORRENT_XML=os.path.join(DATA_DIR, 'torrents.xml')
 MASTER_HASH_LIST = os.path.join( DATA_DIR,'stats.db' )
 ALLOWED_TRACKER_LIST = os.path.join( DATA_DIR, 'allowed_trackers.dat')
-USER_DL_DIR=os.path.join( COMPLETED_TORRENT_DIR, str(os.getuid()) )
+USER_DL_DIR=os.path.join( os.path.expanduser( '~/tshare' ) )
 EXPIRED_TORRENT_DIR='/share/expired'
 MAX_SLEEP_TIME = 20
 FILE_DELIMITER = ':'
 ACTIVE_USER_TORRENTS = os.path.expanduser( '~/.torrents.active' )
 ## /constants
+
+# ======================================================================
+# write a path to ~/torrents.list
+# handy list of torrents one has downloaded so they can potentially script
+# the scp'ing of them to their local machines
+def recordLocalTorrent(path):
+	filename = os.path.join( os.getenv( "HOME" ), 'torrents.list' )
+	fn = open( filename, mode='a' )
+	fn.write( path )
+	fn.write( '\n' )
+	fn.close()
 
 # ======================================================================
 class SafeWriteFile(object):
@@ -97,7 +108,7 @@ class SqliteStats(object):
 	def close(self):
 		self.statsDb.close()
 
-        def saveStatsForHashAndUser(self,hash,uid,uploaded=0,downloaded=0):
+	def saveStatsForHashAndUser(self,hash,uid,uploaded=0,downloaded=0):
 		c = self.statsDb.cursor()
 		## will work as long as hash+uid == pk
 		c.execute( 'REPLACE INTO user_data (hash,uid,uploaded,downloaded) VALUES(?,?,?,?)',
@@ -105,7 +116,7 @@ class SqliteStats(object):
 		c.close()
 		self.statsDb.commit()
 
-        def getStoredStatsForHashAndUser(self,hash,uid):
+	def getStoredStatsForHashAndUser(self,hash,uid):
 		up = 0
 		dn = 0
 
@@ -114,8 +125,8 @@ class SqliteStats(object):
 		row = c.fetchone()
 
 		if row:
-		        up = long(row[0])
-		        dn = long(row[1])
+			up = long(row[0])
+			dn = long(row[1])
 		c.close()
 		return up,dn
 

@@ -39,15 +39,6 @@ def allFilesFromTorrentInfo( info ):
 			files.append( path )
 	return files
 #==============================================================================
-# handy list of torrents one has downloaded so they can potentially script
-# the scp'ing of them to their local machines
-def recordLocalTorrent(path):
-	filename = os.path.join( os.getenv( "HOME" ), 'torrents.list' )
-	fn = open( filename, mode='a' )
-	fn.write( path )
-	fn.write( '\n' )
-	fn.close()
-#==============================================================================
 def printUsageAndExit(appName):
 	print 'USAGE: %s [--delete/-d] [--no-escape] [--pause/-p] file1.torrent ... fileN.torrent' % appName
 	print 'Option \'no-escape\' will prevent filenames from being escaped.'
