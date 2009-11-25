@@ -94,17 +94,7 @@ oldies = findOldTorrents( EXPIRED_TORRENT_DIR, oldtime )
 
 for old in oldies:
 	oldfn = basename(old)
-	canDelete = True
 
-	## TODO: consult a list to obtain torrent users
-	for user in ['howie']:
-		tfile = os.path.join( '/home', user, 'torrents.list')
-		
-		if fileNameExistsInFile( oldfn, tfile):
-			print '%s needs to grab %s' % (user, old)
-			canDelete = False
-
-	if canDelete:
-		if os.path.exists(old):
-			deleteDownloadedTorrent(old)
-			print 'Removed: %s' % old
+	if os.path.exists(old):
+		deleteDownloadedTorrent(old)
+		print 'Removed: %s' % old
