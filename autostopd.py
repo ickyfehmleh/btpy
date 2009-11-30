@@ -77,6 +77,7 @@ class AutostopDaemon(object):
 		self._log.printmsg(s)
 
 	def stopTorrent(self,torrentNode,stopFile,removeStopFile=False):
+		name = findNodeName( torrentNode, 'name' ).encode('ascii','ignore')
 		liveTorrent = findNodeName( torrentNode, 'fullpath' )
 		info = infoFromTorrent( liveTorrent )
 		hash = findNodeName( torrentNode, 'hash' )
@@ -89,7 +90,7 @@ class AutostopDaemon(object):
 		if info == '':
 			self.printmsg( 'Stopped hash %s due to ratio [%.2f] > desired ratio [%.2f]' % (hash, currentRatio, actionRatio))
 		else:
-			self.printmsg( 'Stopped "%s" (hash: %s) due to ratio [%.2f] > desired ratio [%.2f]' % (info['name'], hash, currentRatio, actionRatio))
+			self.printmsg( 'Stopped "%s" (hash: %s) due to ratio [%.2f] > desired ratio [%.2f]' % (name, hash, currentRatio, actionRatio))
 
 		if os.path.exists( liveTorrent ):
 			self.removeFile( liveTorrent )
@@ -213,7 +214,7 @@ while cont:
 	except:
 		s = 'Unhandled exception: ', sys.exc_info()
 		p.printmsg( s )
-		#cont = False
+#		cont = False
 
 p.printmsg( 'Exiting gracefully!')
 p.close()
