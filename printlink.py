@@ -59,6 +59,10 @@ for torrent_name in argv[1:]:
 
 	torrentName = os.path.join( INCOMING_TORRENT_DIR, info_hash )
 
+	if not os.path.exists( torrentName ):
+		print '%s does not exist!' % metainfo_name
+		continue
+
 	if info.has_key('length'): # single file
 		torrentName = os.path.join( INCOMING_TORRENT_DIR, info_hash, info['name'] )
 		outputName = join( USER_DL_DIR, escapeFilename( info['name'] ) )
