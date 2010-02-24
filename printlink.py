@@ -1,17 +1,10 @@
 #!/usr/bin/env python
 #
 # dont fully stop a torrent, but allow the contents to be downloaded
-##
-# BUGS
-# 
-# 1- when using the uid directory, getfiles.sh will log the uid dir.  cleartorrents
-#    will then fail.  cleartorrent (singular, the new one) may work fine and
-#    do the expected thing...
 #
-# 2- should probably log uid dir + file(s) to ~/torrents.list
-##
 import os
 import time
+import getopt
 
 from sys import *
 from os.path import *
@@ -34,16 +27,28 @@ if not os.path.exists(USER_DL_DIR):
 		exit(2)
 
 #==============================================================================
-
-if len(argv) == 1 or argv[1] == '--help':
+try:
+	opts, args = getopt.getopt(argv[1:], 'dp', ['dont-log','path='])
+except getopt.GetoptError:
 	print '%s will allow you to download a torrent without stopping it.' % argv[0]
 	print
 	print 'USAGE: %s file1.torrent ... fileN.torrent' % argv[0]
 	exit(2)
 
+OUTPUT_PATH = USER_DL_DIR
+logTorrent=True
+
+for opt,arg in opts:
+	if opt == '--path':
+		OUTPUT_PATH=os.path.expandvars(os.path.expanduser(arg))
+	if opt == '-p':
+		OUTPUT_PATH=os.getcwd()
+	if opt in ('-d','--dont-log'):
+		logTorrent=False
+
 outputs = []
 
-for torrent_name in argv[1:]:
+for torrent_name in args:
 	metainfo_name = findTorrent(torrent_name)
 	
 	if metainfo_name == '':
@@ -65,13 +70,13 @@ for torrent_name in argv[1:]:
 
 	if info.has_key('length'): # single file
 		torrentName = os.path.join( INCOMING_TORRENT_DIR, info_hash, info['name'] )
-		outputName = join( USER_DL_DIR, escapeFilename( info['name'] ) )
+		outputName = join( OUTPUT_PATH, escapeFilename( info['name'] ) )
 		if os.path.exists( outputName ):
 			printAlreadyLinkedToMessage( outputName )
 		else:
 			os.link(torrentName, outputName )
 	else: # multiple files
-		baseDir = os.path.join( USER_DL_DIR, escapeFilename(info['name']) )
+		baseDir = os.path.join( OUTPUT_PATH, escapeFilename(info['name']) )
 
 		if os.path.exists( baseDir ):
 			printAlreadyLinkedToMessage( baseDir )
@@ -105,6 +110,7 @@ for torrent_name in argv[1:]:
 if len(outputs) > 0:
 	stderr.write( '\n*** Please remember to use cleartorrents after downloading ***\n' )
 	for file in outputs:
-		recordLocalTorrent( file )
+		if logTorrent:
+			recordLocalTorrent( file )
 		stderr.write( '/share/bin/cleartorrents %s\n' % file )
 	stderr.flush()
