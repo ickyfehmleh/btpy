@@ -18,13 +18,13 @@ import tempfile
 import shutil
 
 ## constants
-INCOMING_TORRENT_DIR = '/share/incoming'
-COMPLETED_TORRENT_DIR = '/share/torrents'
-PERCENT_KEEP_FREE = .12
+#INCOMING_TORRENT_DIR = '/share/incoming'
+#COMPLETED_TORRENT_DIR = '/share/torrents'
+#PERCENT_KEEP_FREE = .12
 
-#PERCENT_KEEP_FREE = .30
-#INCOMING_TORRENT_DIR = '/share/test/monitored'
-#COMPLETED_TORRENT_DIR = '/share/test/monitored.done'
+PERCENT_KEEP_FREE = .30
+INCOMING_TORRENT_DIR = '/share/test/monitored'
+COMPLETED_TORRENT_DIR = '/share/test/monitored.done'
 
 DATA_DIR=os.path.join(INCOMING_TORRENT_DIR, '.data')
 COMMAND_DIR='/share/bin'
@@ -345,6 +345,20 @@ def fullFilePathFromTorrent(file_info):
 	return torrentFile
 
 # ======================================================================
+def getAllFilesFromTorrent(fn):
+	info = infoFromTorrent(fn)
+	paths = []
+
+	if info != '':
+		for file in info['files']:
+			path = ''
+			for item in file['path']:
+				if (path != ''):
+					path = path + "/"
+				path = path + item
+			paths.append( path )
+	return paths
+
 def nameFromTorrent(fn):
 	info = infoFromTorrent(fn)
 
