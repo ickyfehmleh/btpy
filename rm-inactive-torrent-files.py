@@ -37,7 +37,7 @@ def processDirectory(dir):
 					print '### Failed to get info from torrent %s' % tname
 					continue
 
-				hash = sha( bencode( info ) ).hexdigest()
+				hash = hashFromInfo( info ) #sha( bencode( info ) ).hexdigest()
 
 				if not isTorrentProcessing(hash):
 					if not tname in inactiveTorrents:

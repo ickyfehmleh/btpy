@@ -1,12 +1,12 @@
 #!/usr/local/bin/python
 ##############################################################################
 # TODO
-# - move .hashes to a .dbm file for quicker lookups
+# - have a list of allowable trackers; if torrent's announce url isnt in
+#   one of those lists, dont add torrent to incoming dir
 ##############################################################################
 
 from sys import *
 from os.path import *
-from sha import *
 from BitTornado.bencode import *
 import statvfs
 import os
@@ -19,28 +19,40 @@ import re
 from common import *
 import getopt
 
-########################################################################
-def activateTorrent(userDataStore=None, dataStore=None, userData=None ):
-	userData.start()
-	dataStore.startTorrent( userData )
-	userDataStore.addActiveTorrent( userData )
-########################################################################
-
+useSymlinks = False
+#useSymlinks = True
+## make a symlink from the torrent to the incoming dir?
+## if false, copies torrent to incoming dir
 cookieFile = os.path.join(os.environ["HOME"], ".btrss", "cookies.txt" )
 forceDownload = False
+downloadOnly = False
 
 print
 
+# make sure user has a default ratio set
+if not os.path.exists( os.path.join( AUTOSTOPD_DIR, str(os.getuid())+".xml" ) ):
+	print "No default ratio found.  Please set one via 'autostop'."
+	exit(2)
+
 # setup args
 try:
-	opts, args = getopt.getopt(argv[1:], 'f', ['force', 'cookie='])
+	opts, args = getopt.getopt(argv[1:], 'fd', ['download','force', 'cookie='])
 except getopt.GetoptError:
-	print '%s file1.torrent [--force/-f] [--cookie=path] fileN.torrent' % argv[0]
+	print '%s [--force/-f] [--cookie=path] file1.torrent ... fileN.torrent' % argv[0]
+	print ''
+	print '--download/-d: Just download a torrent from a URL.'
+	print '--force/-f: if a file has already been downloaded, download it again'
+	print '--cookie=<path>: read Netscape-style cookies from <path>'
+	print '                 defaults to ~/.btrss/cookies.txt'
+	print ''
+	print '%s can also fetch files from URLs via cookie-based authentication' % argv[0]
 	exit(2)
 
 for opt,arg in opts:
 	if opt in ("-f", "--force"):
 		forceDownload = True
+	if opt in ('-d','--download'):
+		downloadOnly = True
 	if opt == "--cookie":
 		cookieFile =  os.path.expandvars(os.path.expanduser(arg))
 
@@ -65,9 +77,6 @@ totalSpace = st[statvfs.F_BLOCKS] * st[statvfs.F_FRSIZE]
 freeSpace = st[statvfs.F_BFREE] * st[statvfs.F_FRSIZE]
 ## take off 12%; dont let disk get above 88% full
 freeSpace -= (totalSpace * PERCENT_KEEP_FREE)
-
-dataStore = initDataStore()
-userDataStore = dataStore.getUserDataStore()
 	
 for metainfo_name in args:
 	if metainfo_name.startswith( 'http://' ) or metainfo_name.startswith( 'https://' ):
@@ -94,6 +103,9 @@ for metainfo_name in args:
 		of = open( filestr, "wb" )
 		of.write( f.read() )
 		of.close()
+		if downloadOnly:
+			print 'Saved %s as %s' % (metainfo_name,filestr)
+			continue
 		metainfo_name = filestr
 
 	# owners have to match
@@ -105,21 +117,15 @@ for metainfo_name in args:
 	metainfo = bdecode(metainfo_file.read())
 	metainfo_file.close()
 	info = metainfo['info']
-	info_hash = sha( bencode( info  ) ).hexdigest()
-
-	data = userDataStore.createNewTorrent(path=os.path.abspath(metainfo_file), name=info['name'], hash=info_hash )
+	info_hash = hashFromInfo(info) #sha( bencode( info  ) ).hexdigest()
 
 	# allowed tracker?
-	if not dataStore.isTrackerAllowed( metainfo['announce'] ):
+	if not isTrackerAllowed( metainfo['announce'] ):
 		print 'Tracker for \'%s\' is not allowed.' % info['name']
 		continue
 
-	if dataStore.isTorrentActive( data ):
-		print 'A torrent the signature %s is already being downloaded' % info_hash
-		continue
-
 	## make sure we havent downloaded this already
-	if dataStore.checkDownloadStatus( info_hash ) and not forceDownload:
+	if checkDownloadStatus( info_hash ) and not forceDownload:
 		print "A torrent with the hash %s has already been downloaded." % info_hash
 	else:	
 		if info.has_key('length'):
@@ -135,7 +141,19 @@ for metainfo_name in args:
 		else:
 			freeSpace -= fileSize
 	
-			# log the torrent info
-			activateTorrent( dataStore=dataStore, userDataStore=userDataStore, userData=data )
-			print 'Will begin downloading %s shortly.' % metainfo_name
-userDataStore.save()
+			# figure out what to name the torrent
+			torrentName = ( os.path.join( INCOMING_TORRENT_DIR, info_hash ) + '.torrent' )
+	
+			if exists( torrentName ):
+				print 'A torrent the signature %s is already being downloaded' % info_hash
+			else:
+				# log the torrent info
+				if useSymlinks:
+					os.symlink( os.path.abspath(metainfo_name), torrentName )
+					os.chmod( metainfo_name, 0640 )
+				else:
+					copy( metainfo_name, torrentName )
+					os.chmod( torrentName, 0660 ) # needs to be writeable by tshare for autostopd
+
+				recordActiveTorrent( metainfo_name, info['name'], info_hash )
+				print 'Will begin downloading %s shortly.' % metainfo_name

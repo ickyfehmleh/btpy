@@ -36,7 +36,7 @@ $TORRENT_DIR \
 --saveas_style 3 \
 --parse_dir_interval 15 \
 --security 0 \
---alloc_rate 1 \
+--alloc_rate 2 \
 --crypto_allowed 1
 }
 

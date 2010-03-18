@@ -5,35 +5,35 @@
 import os.path
 
 class Torrent:
-	#__slots__
-
 	def __init__(self,fileName):
 		self.fileName = os.path.abspath(fileName)
-		## FIXME fetch all data from torrent
+		f = open(self.fileName, 'rb')
+		self.metainfo = bdecode(f.read())
+		f.close()
+		self.info = metainfo['info']
 
 	def announceURL(self):
+		return self.metainfo['announce']
+
 	def filesInTorrent(self):
+		pass
+
 	def infoHash(self):
+		return sha(bencode(self.info)).hexdigest()
+
 	def archiveSize(self):
+		pass
+
 	def fileName(self):
 		return self.fileName
 
-## REFACTOR to launchmanyxml.py
-def nameFromTorrent(fn):
-	info = infoFromTorrent(fn)
+	def torrentName(self):
+		return self.info['name']
 
-	if info == '':
-		return None
-	else:
-		return info['name']
+	def isFileOwnerCurrentUser(self):
+		return os.stat(self.fileName).st_uid == os.getuid()
 
-## get metainfo from a given torrent
-def infoFromTorrent(fn):
-	try:
-		metainfo_file = open(fn, 'rb')
-		metainfo = bdecode(metainfo_file.read())
-		metainfo_file.close()
-		info = metainfo['info']
-		return info
-	except:
-		return ''
+	def isActive(self):
+		hash = self.infoHash()
+		fn = os.path.join( INCOMING_TORRENT_DIR, hash + '.torrent' )
+		return os.path.exists( fn )

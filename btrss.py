@@ -20,6 +20,7 @@
 #############################################################################
 
 import sys
+## author of pythonutils is a fucking idiot and cant write decent code
 import cookielib
 import urllib2
 from urllib import unquote_plus
@@ -28,7 +29,8 @@ import re
 import os
 import os.path
 import string
-from sha import *
+#from sha import *
+from hashlib import sha1 as sha
 from BitTornado.bencode import *
 import shutil
 import tempfile
@@ -73,7 +75,6 @@ def logTorrent(hash,title,url):
 	df.write( logStr )
 	df.write( '\n' )
 	df.close()
-
 ########################################################################
 # print a log line
 def printdebug(str):
@@ -172,7 +173,7 @@ def checkDownloadStatusForURL( url ):
 ########################################################################
 # should really be combined with the above method i think
 def checkDownloadStatusForHash(hash):
-	torrentLog = open( DATA_FILE, 'r')
+	torrentLog = open( DATA_FILE, 'r' )
 	lines = torrentLog.readlines()
 	torrentLog.close()
 

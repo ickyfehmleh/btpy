@@ -11,67 +11,26 @@ import string
 import math
 import pwd
 import getopt
-
-## stolen from btlaunchmanycurses.py
-def human_readable(n):
-    n = long(n)
-    unit = [' B', 'K', 'M', 'G', 'T', 'P', 'E', 'Z', 'Y']
-    i = 0
-    if (n > 999):
-        i = 1
-        while i + 1 < len(unit) and (n >> 10) >= 999:
-            i += 1
-            n >>= 10
-        n = float(n) / (1 << 10)
-    if i > 0:
-        size = '%.1f' % n + '%s' % unit[i]
-    else:
-        size = '%.0f' % n + '%s' % unit[i]
-    return size
-
-def ratioForHash(hash,uid,autostopDir=None):
-	ratio = float(0.0)
-
-	stopFile = os.path.join(autostopDir,hash+'.xml')
-		
-	if os.path.exists(stopFile):
-		ratio = ratioFromAutostopFile(stopFile)
-	else:
-		stopFile = os.path.join(autostopDir,uid+'.xml')
-		if os.path.exists(stopFile):
-			ratio = ratioFromAutostopFile(stopFile)
-	return ratio
-
-def findNodeName(parentNode, name):
-	for childNode in parentNode.childNodes:
-		if name == childNode.nodeName:
-			content = []
-			for textNode in childNode.childNodes:
-				content.append( textNode.nodeValue )
-			return string.join( content )
-	return ''
+import time
 
 verbose = False
 tsize = 0
 selectedHashes = []
-onlyForThisUser = False
+onlyForThisUser = True
 showTotals = True
-
-# opts:
-# --verbose/-v  ==> verbose = True
-# --hash=<hash> ==> selectedHash = hash
-# --all/--everyone/-a ==> show torrents for all users
-# --for-me ==> only show torrents owned by os.getuid()
+onlyActive = False
+onlyStoppable = False
 
 # setup args
 try:
-	opts, args = getopt.getopt(argv[1:], 'va', ['hash=','torrent=','for-me','all','everyone'])
+	opts, args = getopt.getopt(argv[1:], 'vats', ['stoppable','hash=','torrent=','for-me','all','everyone','transferring'])
 except getopt.GetoptError:
 	print 'Usage: %s [file1.torrent ... fileN.torrent]' % argv[0]
 	print 'Optional arguments: [--verbose/-v]: show stats'
 	print '--hash=<hash>: only show this hash (implies verbose)'
-	print '--for-me: only show torrents you\'re downloading'
-	print '--all/--everyone/-a: show all torrents'
+	print '--all/-a: show all downloads'
+	print '--stoppable/-s: only show stoppable (1:1-seeded) torrents'
+	print '--transferring/-t: show only active downloads'
 	print 'If torrents are specified, only those stats will be shown.'
 	exit(2)
 
@@ -82,33 +41,40 @@ for o,a in opts:
 		selectedHashes.append(a)
 		verbose = True
 		showTotals = False
-	elif o == '--for-me':
-		onlyForThisUser = True
-	elif o in ('--everyone','--all','-a'):
+	elif o in ('--everyone', '--all', '-a'):
 		onlyForThisUser = False
+	elif o in ('--transferring', '-t'):
+		onlyActive = True
+		showTotals = False
+	elif o in ('--stoppable','-s'):
+		onlyStoppable=True
+		showTotals = False
 
 for a in args:
 	if os.path.exists( a ) and a.endswith( '.torrent' ):
-		onlyForThisUser = False
 		info = infoFromTorrent(a)
 		if info == '':
 			print 'Failed to find anything matching %s' % (a)
 		else:
-			selectedHashes.append( sha( bencode( info  ) ).hexdigest() )
+			infHash = hashFromInfo( info )
+			selectedHashes.append( infHash )
 
-dataStore = initDataStore()
-doc = minidom.parse( dataStore.torrentXML() )
+doc = minidom.parse( TORRENT_XML )
 
 if len(selectedHashes) > 0:
 	verbose = True
 	showTotals = False
+	onlyForThisUser = True
+	#onlyActive = False
 
 totalSpeedUp = 0
 totalSpeedDn = 0
 totalBytesUp = 0
 totalBytesDn = 0
+numMatches = 0
 
-print ''
+if not verbose:
+	print ''
 
 for torrent in doc.documentElement.childNodes:
 	if torrent.nodeName == 'torrent':
@@ -124,14 +90,17 @@ for torrent in doc.documentElement.childNodes:
 		if onlyForThisUser and ownerUID != os.getuid():
 			continue
 
-		name = findNodeName( torrent, 'name' ).encode('utf-8')
+		nameUnicode = findNodeName( torrent, 'name' )
+		name = nameUnicode.encode('ascii','ignore')
 		fileSize = int(findNodeName( torrent, 'filesize' ))
 		fsize = human_readable( fileSize )
 		tsize += int( fileSize )
 		bytesUp = int(findNodeName( torrent, 'totalUploadBytes' ))
 		bytesDn = int(findNodeName( torrent, 'totalDownloadBytes' ))
-		speedUp = float(findNodeName(torrent, 'uploadRate'))
-		speedDn = float(findNodeName(torrent, 'downloadRate'))
+		rawSpeedUp = findNodeName(torrent, 'uploadRate')
+		rawSpeedDn = findNodeName(torrent, 'downloadRate')
+		speedUp = float(rawSpeedUp)
+		speedDn = float(rawSpeedDn)
 		progressPercentage = findNodeName(torrent,'progress')
 		totalBytesUp += bytesUp
 		totalBytesDn += bytesDn
@@ -139,13 +108,25 @@ for torrent in doc.documentElement.childNodes:
 		totalSpeedDn += speedDn
 		status = findNodeName( torrent, 'status' )
 		eta = findNodeName( torrent, 'eta' )
-		ratio = float(0.0)
+		ratio = float(-0.00)
+		isActive = False
+		stopRatio = ratioForHash(hash,str(ownerUID))
+
+		if rawSpeedUp.count('-') == 0 and rawSpeedDn.count('-') == 0:
+			if speedUp > 0.0 or speedDn > 0.0:
+				isActive = True
 
 		if bytesDn > 0:
 			ratio = float(bytesUp) / float(bytesDn)
-		else:
-			ratio = -0.00
 
+		if onlyActive and not isActive:
+			continue
+
+		if onlyStoppable and ratio < 1.0:
+			continue
+
+		if verbose:
+			print ''
 
 		if not onlyForThisUser:
 			ownerName = pwd.getpwuid(ownerUID)[0]
@@ -156,9 +137,12 @@ for torrent in doc.documentElement.childNodes:
 			else:
 				print '%s: %s [%s]' % (ownerName, name, fsize)
 		else:
-			print '%s [%s] (%.2f)' % (name, fsize,ratio)
+			print '%s [%s] (%.2f/%.2f)' % (name, fsize,ratio,stopRatio)
 
 		if verbose:
+			numMatches = numMatches + 1
+			started = float(findNodeName(torrent,'started'))
+			startDate = time.ctime( started )
 			if status != "seeding":
 				if eta == "complete!":
 					print 'Status: %s (%s)' % (status, findNodeName( torrent, 'progress' ))
@@ -167,12 +151,12 @@ for torrent in doc.documentElement.childNodes:
 					print 'ETA: %s' % eta
 					if len(errMsg) > 0:
 						print 'ERROR: %s' % errMsg
-			print 'Uploaded: %s, downloaded: %s [Ratio: %.2f, stop @%.2f]' % (human_readable(bytesUp), human_readable(bytesDn), ratio,ratioForHash(hash,str(ownerUID),autostopDir=dataStore.autostopDir()))
-			print ''
-
-if verbose:
-	print '%s @ %s/s up, %s @ %s/s dn' % (human_readable(totalBytesUp), human_readable(totalSpeedUp), human_readable(totalBytesDn), human_readable(totalSpeedDn))
+			print '%s @ %s/s uploaded, %s @ %s/s downloaded' % (human_readable(bytesUp), human_readable(speedUp), human_readable(bytesDn), human_readable(speedDn))
 
 if showTotals:
 	print
-	print 'A total of %s is being downloaded' % human_readable(tsize)
+
+	if verbose:
+		print 'Total of %s being downloaded, %s @ %s/s up, %s @ %s/s dn' % (human_readable(tsize), human_readable(totalBytesUp), human_readable(totalSpeedUp), human_readable(totalBytesDn), human_readable(totalSpeedDn))
+	else:
+		print 'A total of %s is being downloaded' % human_readable(tsize)

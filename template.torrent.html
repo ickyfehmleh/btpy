@@ -1,0 +1,32 @@
+	<tr class="${tableRowClass}">
+		<td align="left" title="Started ${formattedAge} ago by ${ownerName}">${torrentName}
+		<span class="sizeSlug">[${formattedFileSize}]</span>
+		<span class="otherStatusInfo">
+			<br/>
+			<b>Status</b>: ${status} (${progressPercentage}
+		</span>
+		<span class="downloadStatusInfo">
+			<br/>
+			<b>ETA</b>: ${eta} [${progressPercentage} complete]
+		</span>
+		<span class="errMsg">
+			${errorMessage}
+		</span>
+
+		<td nowrap="nowrap" align="center">
+			${formattedBytesUp} @ ${formattedRateUp}
+			<br/>
+			to ${peerCount} peers
+		</td>
+
+		<td nowrap="nowrap" align="center">
+			${formattedBytesDown} @ ${formattedRateDown}
+			<br/>
+			from ${seedCount} seeds
+		</td>
+
+		<td nowrap="nowrap" align='center'>
+			${ratio}
+			<br/>${stopRatio}
+		</td>
+	</tr>

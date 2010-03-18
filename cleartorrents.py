@@ -1,19 +1,18 @@
 #!/usr/local/bin/python
-# FIXME: rename to 'expire'
 ########################################################################
 # sort torrents.list based on what's been downloaded
+########################################################################
+# BUGS
+# 1- doesnt take into account the current working dir.  maybe os.path.normpath()
+#    or os.path.abspath() ?
 #########################################################################
 
-import sys
+from sys import exit, argv
 import os
 import os.path
 import getopt
 from common import *
 import shutil
-from UserDataStore import UserDataStore, UserData
-import time
-
-TORRENT_LIST  = 'torrents.list'    #os.path.join( os.environ["HOME"], "torrents.list" )
 
 ########################################################################
 # move a torrent to the EXPIRED directory
@@ -46,56 +45,74 @@ def removeDownloadedTorrent(dir):
 def printUsageAndExit(appName):
 	print "%s will clear downloaded files from your ~/torrents.list" % appName
 	print
-	print "USAGE: %s [file1 ... fileN]" % appName
-	sys.exit(2)
+	print "USAGE: %s [--fetched-files=FILENAME] [file1 ... fileN]" % appName
+	print "--fetched-files= Specify a path to filenames you've downloaded"
+	print "(defaults to ~/.fetched_files)"
+	exit(2)
 
 ########################################################################
 # main 
+FETCHED_FILES = os.path.join( os.environ["HOME"], ".fetched_files" )
+TORRENT_LIST  = os.path.join( os.environ["HOME"], "torrents.list" )
 
 # use getopt to see if we're processing a different FETCHED_FILES list
 try:
-	opts, args = getopt.getopt(sys.argv[1:], None, ['torrent-list='])
+	opts, args = getopt.getopt(argv[1:], None, ['fetched-files=','torrent-list='])
 except:
-	printUsageAndExit(sys.argv[0])
+	printUsageAndExit(argv[0])
 
 for o, a in opts:
+	if o == "--fetched-files":
+		FETCHED_FILES=os.path.expandvars(os.path.expanduser(a))
 	if o == "--torrent-list":
 		TORRENT_LIST=os.path.expandvars(os.path.expanduser(a))
 
-ts = initDataStore()
-dataStore = dataStore.getUserDataStore(torrentList=TORRENT_LIST)
+# dont make the user have a fetched_files list
+if os.path.exists(FETCHED_FILES):
+	fetchedFiles = cacheFileContents( FETCHED_FILES )
+else:
+	fetchedFiles = []
+
+if not os.path.exists(TORRENT_LIST):
+	print 'Unable to find %s' % TORRENT_LIST
+	printUsageAndExit(argv[0])
+
+# cache our data
+torrentList = cacheFileContents( TORRENT_LIST )
+newTorrents = []
 removeTorrents = []
 
 # if args are specified, clear those torrents
 if len(args) > 0:
-	for currArg in args:
-		currentArg = os.path.abspath( currArg )
+	for currentArg in args:
+		if not os.path.isabs( currentArg ):
+			currentArg = os.path.abspath( currentArg )
+
 		if os.path.exists(currentArg):
 			removeTorrents.append( currentArg )
+			# append to fetched files if not there already
+			if not currentArg in fetchedFiles:
+				fetchedFiles.append( currentArg )
 
-# clear files that have been stopped but are not on the command line
-# bin/stop will need to replace the torrent name with the output filename
-for currentTorrent in dataStore.allStoppedTorrents():
-	remove = False
-	ctOutput = currentTorrent.path
-
-	if ctOutput in removeTorrents:
-		remove = True
-
-	if not os.path.exists( ctOutput ):
+# find out which files have already been fetched
+for currentTorrent in torrentList:
+	if  currentTorrent in fetchedFiles:
 		if not currentTorrent in removeTorrents:
-			remove = True
+			removeTorrents.append( currentTorrent )
+	else: # hasnt been downloaded yet
+		if os.path.exists( currentTorrent ): # make sure file exists
+			newTorrents.append( currentTorrent )
+		else:
+			removeTorrents.append( currentTorrent )
 
-	if remove:
-		sysprint('Retiring %s ...' % ctOutput )
-		try:
-			removeDownloadedTorrent( ctOutput )
-			currentTorrent.download()
-			sysprint( 'Done\n' )
-		except:
-			sysprint( sys.exc_info()[0] + '\n' )
+# wipe all the torrents-to-be-removed
+if len(removeTorrents) > 0:
+	print 'Retiring torrents:'
+	for currentRmTorrent in removeTorrents:
+		print "%s" % currentRmTorrent
+		removeDownloadedTorrent( currentRmTorrent )
 
-# tell our data store we're done processing
-dataStore.save()
+# write out to our original files and unlock
+writeArrayToFile( newTorrents, TORRENT_LIST )
 
-# FIXME: write all stopped torrents out to ~/torrents.list
+writeArrayToFile( fetchedFiles, FETCHED_FILES )

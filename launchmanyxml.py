@@ -26,8 +26,9 @@ import shelve
 import time
 import shutil
 from stat import *
-from common import * # FIXME import common for torrent.xml define?
+from common import *
 from BitTornado.bencode import bdecode
+from pysqlite2 import dbapi2 as sqlite
 
 assert sys.version >= '2', "Install Python 2.0 or greater"
 try:
@@ -35,10 +36,6 @@ try:
 except:
 	True = 1
 	False = 0
-
-def printlog(msg):
-	t = time.strftime( '%Y-%m-%d @ %I:%M:%S %P' )
-	print '[%s]: %s' % (t, msg)
 
 def nameFromTorrent(fn):
 	try:
@@ -70,17 +67,18 @@ Exceptions = []
 
 class XMLDisplayer:
 	outputXMLFile = TORRENT_XML
-	statsdbmFile = os.path.join(INCOMING_TORRENT_DIR,'.stats.db')
 	dbmstats = {}
 	livestats = {}
 	owners = {}
 	torrentNames = {}
+	torrentDates = {}
 	outputFile = None
 
 	def __init__(self,basedir):
 		dataDir = os.path.join(basedir,'.data')
-		#self.statsdbmFile = os.path.join( datadir,'stats.db')
-		#self.outputXMLFile = os.path.join( datadir, 'torrents.xml')
+		self.statsRecorder = SqliteStats(MASTER_HASH_LIST)
+		self._log=MessageLogger('launchmany')
+		self._log.printmsg('Starting...')
 
 	def mergedStats(self,key):
 		liveValue = self.livestats.get(key,'0:0')
@@ -94,6 +92,9 @@ class XMLDisplayer:
 	def cleanup(self):
 		self.saveStats()
 		os.unlink(self.outputXMLFile)
+		self.statsRecorder.close()
+		self._log.printmsg('STOPPING...')
+		self._log.close()
 
 	def saveStats(self):
 		for hash in self.livestats:
@@ -103,8 +104,7 @@ class XMLDisplayer:
 
 	def display(self, data):
 		try:
-			tmpOutputFile = self.outputXMLFile+'.tmp'
-			outputFile = open( tmpOutputFile, 'w' )
+			outputFile = SafeWriteFile(self.outputXMLFile,0640)
 			outputFile.write( '<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n' )
 			outputFile.write( '<torrents>\n' )
 			totalBytesUp = 0
@@ -133,14 +133,15 @@ class XMLDisplayer:
 					self.printXML(outputFile, 'hash', hash)
 					self.printXML(outputFile, 'fullpath', fullPath)
 					self.printXML(outputFile, 'owner', self.owners.get(hash,'0'))
+					self.printXML(outputFile, 'started', self.torrentDates.get(hash,'0') )
 					self.printXML(outputFile,'status',status)
 					self.printXML(outputFile,'progress', progress)
 					self.printXML(outputFile,'peers', peers)
 					self.printXML(outputFile,'seeds',seeds)
 					self.printXML(outputFile,'seedmsg', seedsmsg)
 					self.printXML(outputFile,'distcopies', dist)
-					self.printXML(outputFile,'uploadRate', uprate)
-					self.printXML(outputFile,'downloadRate', dnrate)
+					self.printXML(outputFile,'uploadRate', float(uprate))
+					self.printXML(outputFile,'downloadRate', float(dnrate))
 
 					# store session (livestats[]) up/dn bytes
 					self.printXML(outputFile, 'sessionUploadBytes', liveUp)
@@ -156,7 +157,6 @@ class XMLDisplayer:
 
 			outputFile.write( '</torrents>\n' )
 			outputFile.close()
-			shutil.move(tmpOutputFile, self.outputXMLFile )
 		except:
 			self.message( 'Failed to write output XML!')
 			#self.message( sys.exc_info[0] )
@@ -168,55 +168,28 @@ class XMLDisplayer:
 		return False
 
 	def saveStatsForHashAndUser(self,hash,uid,uploaded=0,downloaded=0):
-		s = shelve.open(self.statsdbmFile)
-		uid = str(uid)
-		if not s.has_key(hash):
-			s[hash] = dict()
-		uidMap = s[hash]
-		if not uidMap.has_key(uid):
-			uidMap[uid] = dict()
-		userinfo = uidMap[uid]
-		userinfo['dn'] = downloaded
-		userinfo['up'] = uploaded
-		uidMap[uid] = userinfo
-		s[hash] = uidMap
-		s.close()
+		self.statsRecorder.saveStatsForHashAndUser(hash,uid,uploaded,downloaded)
 
 	def getStoredStatsForHashAndUser(self,hash,uid):
-		s = shelve.open(self.statsdbmFile)
-		uid=str(uid)
-		up=0
-		dn=0
-		if not s.has_key(hash):
-			s[hash] = dict()
-		uidMap = s[hash]
-		if not uidMap.has_key(uid):
-			uidMap[uid] = dict()
-		userinfo = uidMap[uid]
-		if not userinfo.has_key('dn'):
-			userinfo['dn'] = 0
-		if not userinfo.has_key('up'):
-			userinfo['up'] = 0
-		dn = userinfo['dn']
-		up = userinfo['up']
-		s[hash] = uidMap
-		s.close()
-		return up,dn
+		return self.statsRecorder.getStoredStatsForHashAndUser(hash,uid)
 
 	def addTorrent(self,s):
 		(msg,path) = s.replace('"','').split( ' ')
 		(hash,ext) = os.path.basename(path).split('.')
-		ownerUID = os.stat(path).st_uid
+		fileStat = os.stat(path)
+		ownerUID = fileStat.st_uid
 		self.owners[hash] = str(ownerUID)
 		name = nameFromTorrent(path)
 		if name:
 			self.torrentNames[hash] = name
 		else:
 			name = 'Unavailable'
+		# get date added
+		self.torrentDates[hash] = fileStat.st_ctime
 
 		storedUp,storedDn = self.getStoredStatsForHashAndUser(hash, ownerUID)
 		self.dbmstats[hash] = '%d:%d' % (storedUp,storedDn)
-		printlog( '%d added torrent [%s] hash=%s' % (ownerUID, name, hash) )
+		self.printlog( '%d added torrent [%s] hash=%s' % (ownerUID, name, hash) )
 
 	def dropTorrent(self,s):
 		(msg,path) = s.replace('"','').split( ' ')
@@ -226,11 +199,13 @@ class XMLDisplayer:
 		(totUp,totDn) = self.mergedStats(hash)
 		self.saveStatsForHashAndUser(hash, uid, uploaded=totUp, downloaded=totDn)
 		## wipe all of our lookups
+		torrentName = self.torrentNames.get(hash,'UNKNOWN')
 		del self.dbmstats[hash]
 		del self.livestats[hash]
 		del self.owners[hash]
 		del self.torrentNames[hash]
-		printlog( 'Stopped torrent \'%s\' [%s]' % (path,hash))
+		del self.torrentDates[hash]
+		self.printlog( 'Stopped torrent \'%s\' [%s]' % (torrentName,hash))
 			
 	def message(self, s):
 		if s.startswith( "added" ):
@@ -238,7 +213,7 @@ class XMLDisplayer:
 		elif s.startswith( "dropped" ):
 			self.dropTorrent(s)
 		else:
-			printlog( s )
+			self.printlog( s )
 
 	def printXML(self, fh, tag, value):
 		if tag == 'name':
@@ -250,6 +225,9 @@ class XMLDisplayer:
 	def exception(self, s):
 		Exceptions.append(s)
 		self.message('EXCEPTION CAUGHT: %s' % s)
+
+	def printlog(self,msg):
+		self._log.printmsg(msg)
 
 if __name__ == '__main__':
 	if argv[1:] == ['--version']:
