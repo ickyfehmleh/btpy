@@ -41,6 +41,12 @@ ACTIVE_USER_TORRENTS = os.path.expanduser( '~/.torrents.active' )
 ## /constants
 
 # ======================================================================
+# return a torrent store
+def initTorrentStore():
+	ts = TorrentStore( INCOMING_TORRENT_DIR )
+	return ts
+
+# ======================================================================
 # write a path to ~/torrents.list
 # handy list of torrents one has downloaded so they can potentially script
 # the scp'ing of them to their local machines
