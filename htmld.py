@@ -45,6 +45,7 @@ def boldTransferRate(n):
 class HtmlOutputter(object):
 	def __init__(self,outputHtmlFile):
 		self._htmlFile=outputHtmlFile
+		self._torrentStore = initTorrentStore()
 		self._log=MessageLogger('htmld')
 
 	def statsForTorrentNode(self,torrent):
@@ -143,9 +144,9 @@ class HtmlOutputter(object):
 		mapping = dict()
 		mapping['lastGeneratedDate'] = time.ctime()
 	
-		html.append( TemplatedFile(os.path.join( TEMPLATE_DIR, 'template.header.html' ) ).substitute(mapping) )
-		#rss.append( TemplatedFile(os.path.join( TEMPLATE_DIR, 'template.header.rss' ) ).substitute(mapping) )
-		tmpl = TemplatedFile(os.path.join( TEMPLATE_DIR, 'template.torrent.html' ) )
+		html.append( TemplatedFile(os.path.join( self._torrentStore.templateDir(), 'template.header.html' ) ).substitute(mapping) )
+		#rss.append( TemplatedFile(os.path.join( self._torrentStore.templateDir(), 'template.header.rss' ) ).substitute(mapping) )
+		tmpl = TemplatedFile(os.path.join( self._torrentStore.templateDir(), 'template.torrent.html' ) )
 	
 		for torrent in doc.documentElement.childNodes:
 			if torrent.nodeName == 'torrent':
@@ -166,7 +167,7 @@ class HtmlOutputter(object):
 		mapping['formattedTotalBytesDown'] = human_readable(totalBytesDn)
 		mapping['formattedTotalRateDown'] = human_readable(totalRateDn)
 	
-		html.append( TemplatedFile( os.path.join( TEMPLATE_DIR, 'template.footer.html' ) ).substitute( mapping ) )
+		html.append( TemplatedFile( os.path.join( self._torrentStore.templateDir(), 'template.footer.html' ) ).substitute( mapping ) )
 
 		outp = SafeWriteFile('status.html', 0755)
 		outp.writeline( string.join(html) )
@@ -174,7 +175,7 @@ class HtmlOutputter(object):
 	
 	def process(self):
 		try:
-			doc = minidom.parse( TORRENT_XML )
+			doc = minidom.parse( self._torrentStore.torrentXML() )
 			self.processDocument(doc)
 			doc = None # force python to gc?
 		except:
