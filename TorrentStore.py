@@ -7,7 +7,13 @@ import shutil
 import hashlib
 from BitTornado.bencode import *
 
+class TorrentNotAllowedException(Exception):
+	pass
+
 class TorrentExistsException( Exception ):
+	pass
+
+class TorrentDoesNotExistException( Exception ):
 	pass
 
 class TorrentAlreadyDownloadedException( Exception ):
@@ -25,6 +31,8 @@ class Torrent:
 			self.metainfo = bdecode(f.read())
 			f.close()
 			self.info = self.metainfo['info']
+		else:
+			raise TorrentDoesNotExistException(self.fileName + ' does not exist!' )
 
 	def announceURL(self):
 		return self.metainfo['announce']
@@ -118,16 +126,37 @@ class TorrentStore:
 		fn = os.path.join( self.incomingTorrentDir, hash + '.torrent' )
 		return os.path.exists( fn )
 
+	def isTorrentAlreadyDownloaded(self,t):
+		if t.exists():
+			return self.isTorrentHashAlreadyDownloaded(t.hash())
+		return False
+
+	def isTorrentHashAlreadyDownloaded(self,hash):
+		found = False
+		try:
+			stats = SqliteStats( self.masterHashList() )
+			found = stats.isHashAlreadyDownloaded(hash)
+			stats.close()
+		except:
+			print 'Exception caught!: %s' % str(exc_info())
+			found = True	
+		return found
+
 	def checkDownloadStatus(self,hash):
 		found = False
 		db = shelve.open( self.masterHashList(), flag='r' )
 		found =  db.has_key(hash)
 		db.close()
 		return found
+
+	def isTrackerAllowed(self,t):
+		if t.exists():
+			return self._isTrackerAllowed(t.announceURL())
+		return False
 	
-	def isTrackerAllowed(self,torrentTracker):
+	def _isTrackerAllowed(self,torrentTracker):
 		rv = False
-		f = open( self.allowedTrackerList(), 'r' )
+		f = open( self.allowedTrackersList(), 'r' )
 		for tracker in f.readlines():
 			if tracker.startswith( '#'):
 				continue
@@ -170,12 +199,15 @@ class TorrentStore:
 		if not isinstance(t,Torrent):
 			t = Torrent(t)
 		if t.exists():
-			fn = t.path()
-			hash = t.hash()
-			if not self.isTorrentActive(t):
-				self._startTorrentWithHash(fn,hash)
+			if self.isTrackerAllowed(t):
+				fn = t.path()
+				hash = t.hash()
+				if not self.isTorrentActive(t):
+					self._startTorrentWithHash(fn,hash)
+				else:
+					raise TorrentExistsException,'Already exists'
 			else:
-				raise TorrentExistsException,'Already exists'
+				raise TorrentNotAllowedException('Tracker is not allowed')
 
 	def _startTorrentWithHash(self,torrentPath,hash):
 		startPath = os.path.join( self.incomingTorrentDir, hash + '.torrent' )
