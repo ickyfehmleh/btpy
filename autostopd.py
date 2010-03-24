@@ -45,6 +45,7 @@ class AutostopDaemon(object):
 	_notifyCommand=None
 
 	def __init__(self):
+		self._torrentStore = initTorrentStore()
 		self._log=MessageLogger('autostopd')
 		self.printmsg('Starting...')
 
@@ -103,11 +104,11 @@ class AutostopDaemon(object):
 
 	def processLiveFiles(self):
 		# first find out if we even have pending requests
-		if len( glob.glob( os.path.join(AUTOSTOPD_DIR, '*.xml' ) ) ) == 0:
+		if len( glob.glob( os.path.join(self._torrentStore.autostopDir(), '*.xml' ) ) ) == 0:
 			return
 
 		try:
-			doc = minidom.parse( TORRENT_XML )
+			doc = minidom.parse( self._torrentStore.torrentXML() )
 		except:
 			return True
 	
@@ -118,8 +119,8 @@ class AutostopDaemon(object):
 				bytesDn = long( findNodeName( torrent, 'totalDownloadBytes' ) )
 				fsize = long( findNodeName( torrent, 'filesize' ) )
 				torrentOwnerUID = findNodeName( torrent, 'owner' )
-				ownerDefaultsFile = os.path.join( AUTOSTOPD_DIR, torrentOwnerUID ) + '.xml'
-				autostopFile = os.path.join( AUTOSTOPD_DIR, hash ) + '.xml'
+				ownerDefaultsFile = os.path.join( self._torrentStore.autostopDir(), torrentOwnerUID ) + '.xml'
+				autostopFile = os.path.join( self._torrentStore.autostopDir(), hash ) + '.xml'
 
 				# should we even operate on it?  is it completed?
 				if findNodeName( torrent, 'status' ) != "seeding":
@@ -164,9 +165,9 @@ class AutostopDaemon(object):
 	def processExpiredFiles(self):
 		# now cycle through all the files and make sure they're for 
 		# torrents that are still running
-		for root, dir, files in os.walk( AUTOSTOPD_DIR ):
+		for root, dir, files in os.walk( self._torrentStore.autostopDir() ):
 			for sf in files:
-				stopFile = os.path.join( AUTOSTOPD_DIR, sf )
+				stopFile = os.path.join( self._torrentStore.autostopDir(), sf )
 
 				if not stopFile.endswith( '.xml'):
 					continue
@@ -201,7 +202,6 @@ class AutostopDaemon(object):
 sleepTime = MAX_SLEEP_TIME
 p = AutostopDaemon()
 p.printmsg( 'Will sleep for %d secs' % sleepTime)
-p.printmsg( 'Checking dir %s' % AUTOSTOPD_DIR)
 
 cont = True
 
