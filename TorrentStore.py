@@ -5,6 +5,7 @@ import os
 import os.path
 import shutil
 import hashlib
+import statvfs
 from BitTornado.bencode import *
 
 class TorrentNotAllowedException(Exception):
@@ -65,6 +66,16 @@ class Torrent:
 	def torrentName(self):
 		return self.info['name']
 
+	def size(self):
+		fileSize=0
+		if self.info.has_key('length'):
+		        fileSize = self.info['length']
+		else:
+		        fileSize = 0;
+		        for file in self.info['files']:
+				fileSize += file['length']
+		return fileSize
+
 	def isFileOwnerCurrentUser(self):
 		return os.stat(self.fileName).st_uid == os.getuid()
 
@@ -109,6 +120,9 @@ class TorrentStore:
 
 	def allowedTrackersList(self):
 		return os.path.join( self.dataDir(), 'allowed_trackers.dat')
+
+	def templateDir(self):
+		return os.path.join( self.dataDir(), 'templates')
 
 	def autostopDir(self):
 		return os.path.join( self.dataDir(), 'autostop' )
@@ -198,16 +212,21 @@ class TorrentStore:
 	def startTorrent(self,t):
 		if not isinstance(t,Torrent):
 			t = Torrent(t)
-		if t.exists():
-			if self.isTrackerAllowed(t):
-				fn = t.path()
-				hash = t.hash()
-				if not self.isTorrentActive(t):
-					self._startTorrentWithHash(fn,hash)
-				else:
-					raise TorrentExistsException,'Already exists'
-			else:
-				raise TorrentNotAllowedException('Tracker is not allowed')
+		if self._isTorrentStartable(t):
+			fn = t.path()
+			hash = t.hash()
+			self._startTorrentWithHash(fn,hash)
+
+	def _isTorrentStartable(self,t):
+		if not t.exists():
+			raise TorrentDoesNotExistException
+		elif not self.isTrackerAllowed(t):
+			raise TorrentNotAllowedException('Tracker is not allowed')
+		elif not self.isTorrentActive(t):
+			raise TorrentExistsException,'Already exists'
+		elif not self.isSpaceAvailable(t):
+			raise TorrentNotAllowedException('Not enough disk space available')
+		return True
 
 	def _startTorrentWithHash(self,torrentPath,hash):
 		startPath = os.path.join( self.incomingTorrentDir, hash + '.torrent' )
@@ -276,4 +295,17 @@ class TorrentStore:
 		except:
 			raise
 
-		
+	def _diskSpaceAvailable(self):
+		## get the filesize here so each torrent can take off what it needs
+		## in terms of disk; will give a more accurate picture of the available space
+		st = os.statvfs(self.incomingTorrentDir)
+		totalSpace = st[statvfs.F_BLOCKS] * st[statvfs.F_FRSIZE]
+		#freeSpace = st[statvfs.F_BAVAIL] * st[statvfs.F_FRSIZE]
+		freeSpace = st[statvfs.F_BFREE] * st[statvfs.F_FRSIZE]
+		## take off 12%; dont let disk get above 88% full
+		freeSpace -= (totalSpace * PERCENT_KEEP_FREE)
+		return freeSpace
+
+	def isSpaceAvailable(self,fileSize):
+		freespace = self._diskSpaceAvailable()
+		return freespace > fileSize
