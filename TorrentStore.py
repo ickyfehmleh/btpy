@@ -257,6 +257,22 @@ class TorrentStore:
 	def stopTorrentHashAtRatio(self,hash,ratio):
 		return self._createAutostopFile(ratio,torrentHash=hash)
 
+	def ratioForTorrent(self,t):
+		return self._ratioForTorrentHash(t.hash())
+
+	def _ratioForTorrentHash(self,hash):
+		ratio = float(0.0)
+		stopFile = os.path.join(self.autostopDir(),hash+'.xml')
+
+		if self.autostopExistsForHash(hash):
+			ratio = ratioFromAutostopFile(stopFile)
+		else:
+			stopFile = os.path.join(AUTOSTOPD_DIR,uid+'.xml')
+			if os.path.exists(stopFile):
+				ratio = ratioFromAutostopFile(stopFile)
+		return ratio
+	
+
 	def autostopExistsForHash(self,hash):
 		return os.path.exists( self._autostopFileName(torrentHash=hash) )
 
