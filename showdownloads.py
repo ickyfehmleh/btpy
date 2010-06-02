@@ -122,7 +122,7 @@ for torrent in doc.documentElement.childNodes:
 		if onlyActive and not isActive:
 			continue
 
-		if onlyStoppable and ratio < 1.0:
+		if onlyStoppable and ratio < 1.0 and eta != 'complete!':
 			continue
 
 		if verbose:
