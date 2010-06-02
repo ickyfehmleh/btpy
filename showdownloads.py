@@ -108,9 +108,13 @@ for torrent in doc.documentElement.childNodes:
 		totalSpeedDn += speedDn
 		status = findNodeName( torrent, 'status' )
 		eta = findNodeName( torrent, 'eta' )
+		isCompleted = False
 		ratio = float(-0.00)
 		isActive = False
 		stopRatio = ratioForHash(hash,str(ownerUID))
+
+		if eta == 'complete!':
+			isCompleted = True
 
 		if rawSpeedUp.count('-') == 0 and rawSpeedDn.count('-') == 0:
 			if speedUp > 0.0 or speedDn > 0.0:
@@ -122,8 +126,9 @@ for torrent in doc.documentElement.childNodes:
 		if onlyActive and not isActive:
 			continue
 
-		if onlyStoppable and ratio < 1.0 and eta != 'complete!':
-			continue
+		if onlyStoppable:
+			if ratio < 1.0 or not isCompleted:
+				continue
 
 		if verbose:
 			print ''
