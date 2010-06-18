@@ -73,6 +73,7 @@ for torrent_name in args:
 		outputName = join( OUTPUT_PATH, escapeFilename( info['name'] ) )
 		if os.path.exists( outputName ):
 			printAlreadyLinkedToMessage( outputName )
+			continue
 		else:
 			os.link(torrentName, outputName )
 	else: # multiple files
@@ -80,6 +81,7 @@ for torrent_name in args:
 
 		if os.path.exists( baseDir ):
 			printAlreadyLinkedToMessage( baseDir )
+			continue
 		else:
 			os.mkdir( baseDir )
 			for file in info['files']:
