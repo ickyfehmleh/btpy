@@ -10,6 +10,7 @@ from shutil import *
 import datetime
 import time
 from common import *
+import getopt
 
 ########################################################################
 # delete a dir hierarchy
@@ -81,20 +82,33 @@ def findOldTorrents(rootdir,daysOld=15):
 # 4- if it is, make a note
 # 5- if it is not, delete the torrent
 
+try:
+	opts, args = getopt.getopt(argv[1:], 'dt', ['dir=','time='])
+except getopt.GetoptError:
+	print 'Usage: %s <directory> [time]' % argv[0]
+	exit(2)
+
+# first arg == dir to scan
+if len(args) == 0:
+	print 'USAGE: %s <dir name> [time]' % argv[0]
+	exit(2)
+
 if os.getuid() > 0:
 	print 'Only root can run this!'
 	exit()
 
-if len(argv) > 1:
-	oldtime = int(argv[1])
+
+rootDirectoryToScan=args[0]
+
+if len(args) == 2:
+	oldtime = int(args[1])
 else:
 	oldtime=15
 
-oldies = findOldTorrents( EXPIRED_TORRENT_DIR, oldtime )
+#oldies = findOldTorrents( EXPIRED_TORRENT_DIR, oldtime )
+oldies = findOldTorrents( rootDirectoryToScan, oldtime )
 
 for old in oldies:
-	oldfn = basename(old)
-
 	if os.path.exists(old):
 		deleteDownloadedTorrent(old)
 		print 'Removed: %s' % old
