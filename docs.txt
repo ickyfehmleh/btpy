@@ -1,5 +1,5 @@
-DOCUMENTATION
-=============
+BTPY DOCUMENTATION
+==================
 
 /share/torrents/bin/cleartorrents
 
