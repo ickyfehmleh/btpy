@@ -29,8 +29,9 @@ import re
 import os
 import os.path
 import string
-#from sha import *
-from hashlib import sha1 as sha
+from sha import *
+# python 2.6
+#from hashlib import sha1 as sha
 from BitTornado.bencode import *
 import shutil
 import tempfile
@@ -101,7 +102,7 @@ def fetchFileFromURL(url,writeToDir=None,headers=None):
 	# make an http request
 	try:
 		req = urllib2.Request(url, None, headers)
-		f = urllib2.urlopen(req)
+		f = urllib2.urlopen(req,None,30)
 	except urllib2.HTTPError, e:
 		printmsg( 'HTTP Error accessing %s: %d' % (url, e.code ) )
 		return ''
