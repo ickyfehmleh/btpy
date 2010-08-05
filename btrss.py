@@ -37,6 +37,7 @@ import shutil
 import tempfile
 import getopt
 import time
+import socket
 
 USER_AGENT='Mozilla/4.0 (compatible; btrss-python v1.5; talk to likeomglol@gmail.com if this is a problem)'
 DATA_FILE=os.path.join( os.environ['HOME'], '.btrss', 'btrss.dat')
@@ -101,8 +102,9 @@ def escapeFilename(s):
 def fetchFileFromURL(url,writeToDir=None,headers=None):
 	# make an http request
 	try:
+		socket.setdefaulttimeout( 30 )
 		req = urllib2.Request(url, None, headers)
-		f = urllib2.urlopen(req,None,30)
+		f = urllib2.urlopen(req)
 	except urllib2.HTTPError, e:
 		printmsg( 'HTTP Error accessing %s: %d' % (url, e.code ) )
 		return ''
