@@ -70,4 +70,4 @@ for metainfo_name in args:
 						path = path + "/"
 					path = path + item
 				fsize = human_readable(file['length'])
-				print '        : %s [%s]' % (path, fsize)
+				print '        * %s [%s]' % (path, fsize)
