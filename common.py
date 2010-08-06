@@ -6,7 +6,8 @@ import time
 
 from sys import *
 from os.path import *
-import hashlib
+from sha import *
+#import hashlib
 from BitTornado.bencode import *
 from shutil import *
 import re
@@ -18,13 +19,13 @@ import tempfile
 import shutil
 
 ## constants
-#INCOMING_TORRENT_DIR = '/share/incoming'
-#COMPLETED_TORRENT_DIR = '/share/torrents'
-#PERCENT_KEEP_FREE = .12
+INCOMING_TORRENT_DIR = '/share/incoming'
+COMPLETED_TORRENT_DIR = '/share/torrents'
+PERCENT_KEEP_FREE = .12
 
-PERCENT_KEEP_FREE = .30
-INCOMING_TORRENT_DIR = '/share/test/monitored'
-COMPLETED_TORRENT_DIR = '/share/test/monitored.done'
+#PERCENT_KEEP_FREE = .30
+#INCOMING_TORRENT_DIR = '/share/test/monitored'
+#COMPLETED_TORRENT_DIR = '/share/test/monitored.done'
 
 DATA_DIR=os.path.join(INCOMING_TORRENT_DIR, '.data')
 COMMAND_DIR='/share/bin'
@@ -332,7 +333,7 @@ def removeActiveTorrent(hash):
 # record a hash in our master hashlist file
 def recordDownloadedTorrent(info):
 	## FIXME find the right method to call here
-	info_hash = hashlib.sha1( bencode( info  ) ).hexdigest()
+	info_hash = hashFromInfo( info )
 	removeActiveTorrent(info_hash)
 
 # ======================================================================
@@ -385,7 +386,8 @@ def infoFromTorrent(fn):
 		return ''
 
 def hashFromInfo(info):
-	return hashlib.sha1( bencode( info ) ).hexdigest()
+	#return hashlib.sha1( bencode( info  ) ).hexdigest()
+	return sha( bencode( info ) ).hexdigest()
 
 # ======================================================================
 ## find a file in a torrent
