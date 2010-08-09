@@ -52,8 +52,9 @@ def isFileOld(fn, daysOld=15):
 
 	today = datetime.date.today()
 	oldTime = today + datetime.timedelta(days=-1 * daysOld)
-
-	return oldTime > lastmod
+	rv = oldTime > lastmod
+	#print 'isFileOld(%s,%d): %s' % (fn,daysOld, rv)
+	return rv
 
 ########################################################################
 # find old files
@@ -82,33 +83,40 @@ def findOldTorrents(rootdir,daysOld=15):
 # 4- if it is, make a note
 # 5- if it is not, delete the torrent
 
-try:
-	opts, args = getopt.getopt(argv[1:], 'dt', ['dir=','time='])
-except getopt.GetoptError:
-	print 'Usage: %s <directory> [time]' % argv[0]
-	exit(2)
-
-# first arg == dir to scan
-if len(args) == 0:
-	print 'USAGE: %s <dir name> [time]' % argv[0]
-	exit(2)
-
 if os.getuid() > 0:
 	print 'Only root can run this!'
 	exit()
 
+doDelete=True
+oldtime=15
+
+try:
+	opts, args = getopt.getopt(argv[1:], None, ['dry-run','time='])
+except getopt.GetoptError:
+	print 'Usage: %s [args] <directory>' % argv[0]
+	print '--dry-run => Don\'t delete files'
+	print '--time => Specify days to remove'
+	exit(2)
+
+for opt,arg in opts:
+	if opt == '--dry-run':
+		doDelete=False
+	if opt == '--time':
+		oldtime=int(arg)
+
+# first arg == dir to scan
+if len(args) == 0:
+	print 'USAGE: %s <dir name>' % argv[0]
+	exit(2)
 
 rootDirectoryToScan=args[0]
 
-if len(args) == 2:
-	oldtime = int(args[1])
-else:
-	oldtime=15
-
-#oldies = findOldTorrents( EXPIRED_TORRENT_DIR, oldtime )
 oldies = findOldTorrents( rootDirectoryToScan, oldtime )
 
 for old in oldies:
 	if os.path.exists(old):
-		deleteDownloadedTorrent(old)
-		print 'Removed: %s' % old
+		if doDelete == True:
+			deleteDownloadedTorrent(old)
+			print 'Removed: %s' % old
+		else:
+			print 'Found: %s' % old
