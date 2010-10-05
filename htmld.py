@@ -32,21 +32,18 @@ class TemplatedFile(object):
 		return s
 ########################################################################
 
-def boldTransferRate(n):
-	n = long(n)
-	s = '%s/s' % human_readable(n)
-
-	if n > 0:
-		s = '<b>%s</b>' % s
-	return s
-
-########################################################################
-
 class HtmlOutputter(object):
 	def __init__(self,outputHtmlFile):
 		self._htmlFile=outputHtmlFile
-		self._torrentStore = initTorrentStore()
+		self.torrentStore = initTorrentStore()
 		self._log=MessageLogger('htmld')
+
+	def boldTransferRate(self,n):
+		n = long(n)
+		s = '%s/s' % human_readable(n)
+		if n > 0:
+			s = '<b>%s</b>' % s
+		return s
 
 	def statsForTorrentNode(self,torrent):
 		mapping = dict()
@@ -107,14 +104,14 @@ class HtmlOutputter(object):
 		mapping['bytesDown'] = hstBytesDn
 		mapping['formattedBytesDown'] = human_readable(hstBytesDn)
 		mapping['rateDown'] = rateDn
-		mapping['formattedRateDown'] = boldTransferRate(rateDn)
+		mapping['formattedRateDown'] = self.boldTransferRate(rateDn)
 		mapping['seedCount'] = findNodeName( torrent, 'seeds')
 
 		## up rate
 		mapping['bytesUp'] = hstBytesUp
 		mapping['formattedBytesUp'] = human_readable(hstBytesUp) 
 		mapping['rateUp'] = rateUp
-		mapping['formattedRateUp'] = boldTransferRate(rateUp)
+		mapping['formattedRateUp'] = self.boldTransferRate(rateUp)
 		mapping['peerCount'] = findNodeName( torrent, 'peers' )
 
 		## owner
@@ -144,9 +141,9 @@ class HtmlOutputter(object):
 		mapping = dict()
 		mapping['lastGeneratedDate'] = time.ctime()
 	
-		html.append( TemplatedFile(os.path.join( self._torrentStore.templateDir(), 'template.header.html' ) ).substitute(mapping) )
-		#rss.append( TemplatedFile(os.path.join( self._torrentStore.templateDir(), 'template.header.rss' ) ).substitute(mapping) )
-		tmpl = TemplatedFile(os.path.join( self._torrentStore.templateDir(), 'template.torrent.html' ) )
+		html.append( TemplatedFile(os.path.join( self.torrentStore.templateDir(), 'template.header.html' ) ).substitute(mapping) )
+		#rss.append( TemplatedFile(os.path.join( self.torrentStore.templateDir(), 'template.header.rss' ) ).substitute(mapping) )
+		tmpl = TemplatedFile(os.path.join( self.torrentStore.templateDir(), 'template.torrent.html' ) )
 	
 		for torrent in doc.documentElement.childNodes:
 			if torrent.nodeName == 'torrent':
@@ -167,7 +164,7 @@ class HtmlOutputter(object):
 		mapping['formattedTotalBytesDown'] = human_readable(totalBytesDn)
 		mapping['formattedTotalRateDown'] = human_readable(totalRateDn)
 	
-		html.append( TemplatedFile( os.path.join( self._torrentStore.templateDir(), 'template.footer.html' ) ).substitute( mapping ) )
+		html.append( TemplatedFile( os.path.join( self.torrentStore.templateDir(), 'template.footer.html' ) ).substitute( mapping ) )
 
 		outp = SafeWriteFile('status.html', 0755)
 		outp.writeline( string.join(html) )
@@ -175,7 +172,7 @@ class HtmlOutputter(object):
 	
 	def process(self):
 		try:
-			doc = minidom.parse( self._torrentStore.torrentXML() )
+			doc = minidom.parse( self.torrentStore.torrentXML() )
 			self.processDocument(doc)
 			doc = None # force python to gc?
 		except:
