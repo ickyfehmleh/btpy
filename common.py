@@ -172,16 +172,8 @@ def human_readable(n):
 # ======================================================================
 # ratio for a given hash
 def ratioForHash(hash,uid):
-	ratio = float(0.0)
-
-	stopFile = os.path.join(AUTOSTOPD_DIR,hash+'.xml')
-
-	if os.path.exists(stopFile):
-		ratio = ratioFromAutostopFile(stopFile)
-	else:
-		stopFile = os.path.join(AUTOSTOPD_DIR,uid+'.xml')
-		if os.path.exists(stopFile):
-			ratio = ratioFromAutostopFile(stopFile)
+	ts = initTorrentStore()
+	ratio = ts._ratioForTorrentHash(hash,uid)
 	return ratio
 
 # ======================================================================
@@ -232,19 +224,8 @@ def ratioFromAutostopFile(fn):
 	return 0.00
 
 def isTrackerAllowed(torrentTracker):
-	rv = False
-
-	f = open( ALLOWED_TRACKER_LIST, 'r' )
-	for tracker in f.readlines():
-		if tracker.startswith( '#'):
-			continue
-
-		tracker = tracker[:-1]
-		if torrentTracker.rfind( tracker) > -1:
-			rv = True
-			break
-	f.close();
-
+	ts = initTorrentStore()
+	rv = ts._isTrackerAllowed(torrentTracker)
 	return rv
 
 # ======================================================================
@@ -252,8 +233,9 @@ def isFileOwnerCurrentUser(fn):
 	return os.stat(fn).st_uid == os.getuid()
 
 def isTorrentHashActive(hash):
-	fn = os.path.join( INCOMING_TORRENT_DIR, hash + '.torrent' )
-	return os.path.exists( fn )
+	ts = initTorrentStore()
+	rv = ts.isTorrentHashActive(hash)
+	return rv
 
 # ======================================================================
 def printSleepingStatus(timeToSleep):
