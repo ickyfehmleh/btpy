@@ -140,6 +140,10 @@ class TorrentStore:
 		fn = os.path.join( self.incomingTorrentDir, hash + '.torrent' )
 		return os.path.exists( fn )
 
+	def torrentDataPathForHash(self,hash):
+		fn = os.path.join( self.incomingTorrentDir, hash )
+		return fn
+
 	def isTorrentAlreadyDownloaded(self,t):
 		if t.exists():
 			return self.isTorrentHashAlreadyDownloaded(t.hash())
