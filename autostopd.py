@@ -45,7 +45,7 @@ class AutostopDaemon(object):
 	_notifyCommand=None
 
 	def __init__(self):
-		self._torrentStore = initTorrentStore()
+		self.torrentStore = initTorrentStore()
 		self._log=MessageLogger('autostopd')
 		self.printmsg('Starting...')
 
@@ -65,11 +65,10 @@ class AutostopDaemon(object):
 		self.touchFile( torrentDir )
 
 	def isTorrentProcessing(self,hash):
-		if isTorrentHashActive(hash):
+		if self.torrentStore.isTorrentHashActive(hash):
 			return True
 		else:
-			fn = os.path.join( INCOMING_TORRENT_DIR, hash )
-			return os.path.exists( fn )
+			return self.torrentStore.isTorrentDataPresentForHash(hash)
 
 	def usernameForUID(self,uid):
 		return pwd.getpwuid( int(uid) )[0]
@@ -79,7 +78,7 @@ class AutostopDaemon(object):
 
 	def stopTorrent(self,torrentNode,stopFile,removeStopFile=False):
 		name = findNodeName( torrentNode, 'name' ).encode('ascii','ignore')
-		liveTorrent = findNodeName( torrentNode, 'fullpath' )
+		liveTorrent = findNodeName( torrentNode, 'fullPath' )
 		info = infoFromTorrent( liveTorrent )
 		hash = findNodeName( torrentNode, 'hash' )
 		bytesUp = long( findNodeName( torrentNode, 'totalUploadBytes' ) )
@@ -93,9 +92,9 @@ class AutostopDaemon(object):
 		else:
 			self.printmsg( 'Stopped "%s" (hash: %s) due to ratio [%.2f] > desired ratio [%.2f]' % (name, hash, currentRatio, actionRatio))
 
-		if os.path.exists( liveTorrent ):
-			self.removeFile( liveTorrent )
-			self.touchAllTorrentFiles(info, os.path.join( INCOMING_TORRENT_DIR, hash) )
+		if self.torrentStore.isTorrentHashActive(hash):
+			self.torrentStore.stopTorrentHash(hash)
+			self.touchAllTorrentFiles(info, os.path.join( self.torrentStore.torrentDataPathForHash(hash) )
 		else:
 			self.printmsg( 'Error: %s does not exist' % liveTorrent )
 
@@ -104,11 +103,11 @@ class AutostopDaemon(object):
 
 	def processLiveFiles(self):
 		# first find out if we even have pending requests
-		if len( glob.glob( os.path.join(self._torrentStore.autostopDir(), '*.xml' ) ) ) == 0:
+		if len( glob.glob( os.path.join(self.torrentStore.autostopDir(), '*.xml' ) ) ) == 0:
 			return
 
 		try:
-			doc = minidom.parse( self._torrentStore.torrentXML() )
+			doc = minidom.parse( self.torrentStore.torrentXML() )
 		except:
 			return True
 	
@@ -119,8 +118,8 @@ class AutostopDaemon(object):
 				bytesDn = long( findNodeName( torrent, 'totalDownloadBytes' ) )
 				fsize = long( findNodeName( torrent, 'filesize' ) )
 				torrentOwnerUID = findNodeName( torrent, 'owner' )
-				ownerDefaultsFile = os.path.join( self._torrentStore.autostopDir(), torrentOwnerUID ) + '.xml'
-				autostopFile = os.path.join( self._torrentStore.autostopDir(), hash ) + '.xml'
+				ownerDefaultsFile = os.path.join( self.torrentStore.autostopDir(), torrentOwnerUID ) + '.xml'
+				autostopFile = os.path.join( self.torrentStore.autostopDir(), hash ) + '.xml'
 
 				# should we even operate on it?  is it completed?
 				if findNodeName( torrent, 'status' ) != "seeding":
@@ -165,9 +164,9 @@ class AutostopDaemon(object):
 	def processExpiredFiles(self):
 		# now cycle through all the files and make sure they're for 
 		# torrents that are still running
-		for root, dir, files in os.walk( self._torrentStore.autostopDir() ):
+		for root, dir, files in os.walk( self.torrentStore.autostopDir() ):
 			for sf in files:
-				stopFile = os.path.join( self._torrentStore.autostopDir(), sf )
+				stopFile = os.path.join( self.torrentStore.autostopDir(), sf )
 
 				if not stopFile.endswith( '.xml'):
 					continue
@@ -180,7 +179,7 @@ class AutostopDaemon(object):
 					continue
 				except:
 					# dealing with a hashfile
-					if not isTorrentHashActive(hash):
+					if not self.torrentStore.isTorrentHashActive(hash):
 						self.printmsg( 'Removed stopped torrent %s' % stopFile )
 						self.removeFile( stopFile )
 
