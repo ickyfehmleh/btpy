@@ -58,8 +58,14 @@ for a in args:
 		else:
 			infHash = hashFromInfo( info )
 			selectedHashes.append( infHash )
-
-doc = minidom.parse( TORRENT_XML )
+try:
+	doc = minidom.parse( TORRENT_XML )
+except IOError,e:
+	if e.errno == 2:
+		print 'Torrenting not running, try again later'
+	else:
+		print 'I/O error parsing XML: %s' % e.strerror
+	exit()
 
 if len(selectedHashes) > 0:
 	verbose = True
