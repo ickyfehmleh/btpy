@@ -17,6 +17,7 @@ import string
 from pysqlite2 import dbapi2 as sqlite
 import tempfile
 import shutil
+from TorrentStore import *
 
 ## constants
 INCOMING_TORRENT_DIR = '/share/incoming'

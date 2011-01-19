@@ -4,7 +4,8 @@
 import os
 import os.path
 import shutil
-import hashlib
+from sha import *
+#import hashlib
 import statvfs
 from BitTornado.bencode import *
 
