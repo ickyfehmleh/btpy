@@ -78,6 +78,7 @@ totalSpeedDn = 0
 totalBytesUp = 0
 totalBytesDn = 0
 numMatches = 0
+torrentStore = initTorrentStore()
 
 if not verbose:
 	print ''
@@ -117,6 +118,8 @@ for torrent in doc.documentElement.childNodes:
 		isCompleted = False
 		ratio = float(-0.00)
 		isActive = False
+		tfile = Torrent(torrentPath)
+		stopRatio = torrentStore.ratioForTorrent( tfile )
 		stopRatio = ratioForHash(hash,str(ownerUID))
 
 		if eta == 'complete!':

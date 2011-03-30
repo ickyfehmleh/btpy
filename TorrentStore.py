@@ -4,8 +4,8 @@
 import os
 import os.path
 import shutil
-from sha import *
-#import hashlib
+from sha import sha as sha1
+#from hashlib import sha1
 import statvfs
 from BitTornado.bencode import *
 
@@ -53,7 +53,7 @@ class Torrent:
 		return paths
 
 	def hash(self):
-		return hashlib.sha1(bencode(self.info)).hexdigest()
+		return sha1(bencode(self.info)).hexdigest()
 
 	def exists(self):
 		return os.path.exists( self.fileName )
@@ -272,7 +272,7 @@ class TorrentStore:
 		if self.autostopExistsForHash(hash):
 			ratio = ratioFromAutostopFile(stopFile)
 		else:
-			stopFile = os.path.join(AUTOSTOPD_DIR,uid+'.xml')
+			stopFile = self._autostopFileName(None) #os.path.join(AUTOSTOPD_DIR,uid+'.xml')
 			if os.path.exists(stopFile):
 				ratio = ratioFromAutostopFile(stopFile)
 		return ratio
@@ -284,8 +284,9 @@ class TorrentStore:
 	def _autostopFileName(self,torrentHash=None):
 		f = str(os.getuid())
 		if torrentHash:
-			f = hash
-		return os.path.join( self.autostopDir(), f+".xml" )
+			f = str(hash)
+		fn = f + '.xml'
+		return os.path.join( self.autostopDir(), fn )
 
 	def removeAutostopForHash(self,hash):
 		if self.autostopExistsForHash(hash):
