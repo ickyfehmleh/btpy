@@ -42,13 +42,20 @@ def findExpirationDate(fn):
 def calculateSize(fn):
 	bytes = 0
 	filecount= 0
-	for root, dirs, files in os.walk( fn ):
-		for file in files:
-			filen = os.path.join( root, file )
-			st = os.stat( filen )
-			size = st[stat.ST_SIZE]
-			bytes += size
-			filecount = filecount + 1
+
+	if os.path.isdir( fn ):
+		for root, dirs, files in os.walk( fn ):
+			for file in files:
+				filen = os.path.join( root, file )
+				st = os.stat( filen )
+				size = st[stat.ST_SIZE]
+				bytes += size
+				filecount = filecount + 1
+	else:
+		st = os.stat( fn )
+		size = st[stat.ST_SIZE]
+		bytes = size
+		filecount = 1
 	return (bytes,filecount)
 #### 
 if len(sys.argv) != 2:
