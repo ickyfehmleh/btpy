@@ -4,12 +4,16 @@
 #
 
 from common import *
+import sys
 import os
 import stat
 import os.path
 import datetime
 import string
 from string import Template
+
+DELETE_DAYS_OLD=21
+# this should be externalized as a . file in data
 
 ## move to common
 class TemplatedFile(object):
@@ -32,7 +36,7 @@ ROOT_DIR='/share/expired'
 def findExpirationDate(fn):
 	stats = os.stat( fn )
 	lastmod = datetime.date.fromtimestamp( stats[8] )
-	deleteDate = lastmod + datetime.timedelta(days=14)
+	deleteDate = lastmod + datetime.timedelta(days=DELETE_DAYS_OLD)
 	return deleteDate
 
 def calculateSize(fn):
@@ -47,9 +51,20 @@ def calculateSize(fn):
 			filecount = filecount + 1
 	return (bytes,filecount)
 #### 
+if len(sys.argv) != 2:
+	print 'Usage: %s <output file>' % sys.argv[0]
+	sys.exit()
+outputFile = sys.argv[1]
 dates = {}
 
 torrentStore = initTorrentStore()
+
+# figure out how many days old
+cfg = os.path.join( torrentStore.dataDir(), 'find-expired-days-old' )
+f = open( cfg, 'r' )
+cfgs = f.read()
+f.close()
+DELETE_DAYS_OLD=int(cfgs)
 
 for file in os.listdir( ROOT_DIR ):
 	filen = os.path.join( ROOT_DIR, file )
@@ -94,6 +109,7 @@ mapping['rawTotalBytes'] = totalBytes
 
 html.append( TemplatedFile(os.path.join( torrentStore.templateDir(), 'template.retire-footer.html' ) ).substitute(mapping) )
 
-f = SafeWriteFile( 'tmp.html' )
+f = SafeWriteFile( outputFile )
 f.write( string.join( html ) )
 f.close()
+os.chmod( outputFile, 0644 )
