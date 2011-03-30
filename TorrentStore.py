@@ -8,6 +8,8 @@ from sha import sha as sha1
 #from hashlib import sha1
 import statvfs
 from BitTornado.bencode import *
+from xml.dom import minidom, Node
+import string
 
 class TorrentNotAllowedException(Exception):
 	pass
@@ -126,7 +128,7 @@ class TorrentStore:
 		return os.path.join( self.dataDir(), 'templates')
 
 	def autostopDir(self):
-		return os.path.join( self.dataDir(), 'autostop' )
+		return os.path.join( self.dataDir(), 'autostopd' )
 
 	def dataDir(self):
 		return os.path.join( self.incomingTorrentDir, '.data' )
@@ -270,11 +272,11 @@ class TorrentStore:
 		stopFile = os.path.join(self.autostopDir(),hash+'.xml')
 
 		if self.autostopExistsForHash(hash):
-			ratio = ratioFromAutostopFile(stopFile)
+			ratio = self.ratioFromAutostopFile(stopFile)
 		else:
-			stopFile = self._autostopFileName(None) #os.path.join(AUTOSTOPD_DIR,uid+'.xml')
+			stopFile = self._autostopFileName(torrentHash=None)
 			if os.path.exists(stopFile):
-				ratio = ratioFromAutostopFile(stopFile)
+				ratio = self.ratioFromAutostopFile(stopFile)
 		return ratio
 	
 
@@ -331,3 +333,19 @@ class TorrentStore:
 	def isSpaceAvailable(self,fileSize):
 		freespace = self._diskSpaceAvailable()
 		return freespace > fileSize
+
+	def ratioFromAutostopFile(self,fn):
+		asf = minidom.parse( fn )
+		req = asf.documentElement.childNodes[1]
+		ratio = self.findNodeName( req, 'ratio' )
+		if ratio:
+			return float(ratio)
+		return 0.00
+
+	def findNodeName(self,parentNode, name):
+		c = []
+		for childNode in parentNode.childNodes:
+			if name == childNode.nodeName:
+				for textNode in childNode.childNodes:
+					c.append( textNode.nodeValue )
+		return string.join( c )

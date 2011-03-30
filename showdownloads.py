@@ -118,9 +118,8 @@ for torrent in doc.documentElement.childNodes:
 		isCompleted = False
 		ratio = float(-0.00)
 		isActive = False
-		tfile = Torrent(torrentPath)
-		stopRatio = torrentStore.ratioForTorrent( tfile )
-		stopRatio = ratioForHash(hash,str(ownerUID))
+		stopRatio = torrentStore.ratioForTorrent( Torrent(torrentPath) )
+		#stopRatio = ratioForHash(hash,str(ownerUID))
 
 		if eta == 'complete!':
 			isCompleted = True
