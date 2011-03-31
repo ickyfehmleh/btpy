@@ -121,7 +121,7 @@ class HtmlOutputter(object):
 		mapping['ownerName'] = ownerName
 
 		hash = findNodeName(torrent,'hash')
-		stopRatio = ratioForHash(hash,str(ownerUID))
+		stopRatio = self.torrentStore.ratioForTorrent( Torrent(torrentPath) )
 		mapping['stopRatio'] = '%.2f' % stopRatio
 
 		return mapping

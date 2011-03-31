@@ -82,6 +82,9 @@ class Torrent:
 	def isFileOwnerCurrentUser(self):
 		return os.stat(self.fileName).st_uid == os.getuid()
 
+	def fileOwnerUid(self):
+		return os.stat(self.fileName).st_uid
+
 	def isActive(self):
 		hash = self.infoHash()
 		fn = os.path.join( INCOMING_TORRENT_DIR, hash + '.torrent' )
@@ -265,7 +268,8 @@ class TorrentStore:
 		return self._createAutostopFile(ratio,torrentHash=hash)
 
 	def ratioForTorrent(self,t):
-		return self._ratioForTorrentHash(t.hash(), os.getuid() )
+		uid = t.fileOwnerUid()
+		return self._ratioForTorrentHash(t.hash(), uid )
 
 	def _ratioForTorrentHash(self,hash,uid):
 		ratio = float(0.0)
@@ -274,28 +278,26 @@ class TorrentStore:
 		if self.autostopExistsForHash(hash):
 			ratio = self.ratioFromAutostopFile(stopFile)
 		else:
-			stopFile = self._autostopFileName(torrentHash=None)
+			stopFile = self._autostopFileName(uid)
 			if os.path.exists(stopFile):
 				ratio = self.ratioFromAutostopFile(stopFile)
 		return ratio
 	
 
 	def autostopExistsForHash(self,hash):
-		return os.path.exists( self._autostopFileName(torrentHash=hash) )
+		return os.path.exists( self._autostopFileName(hash) )
 
-	def _autostopFileName(self,torrentHash=None):
-		f = str(os.getuid())
-		if torrentHash:
-			f = str(hash)
+	def _autostopFileName(self,item):
+		f = str(item)
 		fn = f + '.xml'
 		return os.path.join( self.autostopDir(), fn )
 
 	def removeAutostopForHash(self,hash):
 		if self.autostopExistsForHash(hash):
-			os.remove(self._autostopFileName(torrentHash=hash))
+			os.remove(self._autostopFileName(hash))
 
 	def _createAutostop(self,ratio,torrentHash=None,forceCreation=False):
-		stopFile = self._autostopFileName(torrentHash=torrentHash)
+		stopFile = self._autostopFileName(torrentHash)
 
 		if not torrentHash:
 			forceCreation = True
