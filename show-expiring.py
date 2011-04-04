@@ -12,7 +12,7 @@ import datetime
 import string
 from string import Template
 
-DELETE_DAYS_OLD=21
+DELETE_DAYS_OLD=22
 # this should be externalized as a . file in data
 
 ## move to common
