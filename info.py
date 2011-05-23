@@ -4,6 +4,7 @@
 #
 
 from common import *
+from TorrentStore import *
 import getopt
 import sys
 import string
@@ -39,6 +40,8 @@ if len(args) == 0:
 	print '%s file1.torrent file2.torrent file3.torrent ...' % argv[0]
 	exit(2)
 
+ts = initTorrentStore()
+
 for metainfo_name in args:
 	print
 	metainfo_file = open(metainfo_name, 'rb')
@@ -47,7 +50,7 @@ for metainfo_name in args:
 	info = metainfo['info']
 	info_hash = hashFromInfo(info)
 
-	if isTorrentHashActive(info_hash):
+	if ts.isTorrentHashActive(info_hash):
 		print '%s is a live torrent' % metainfo_name
 	else:
 		print '%s is a dead torrent' % metainfo_name
