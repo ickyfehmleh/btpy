@@ -47,13 +47,15 @@ def fileNameExistsInFile(fname,readFile):
 ########################################################################
 # stat()s a dir/file, checks to see if its older than n number of days
 def isFileOld(fn, daysOld=15):
-	stats = os.stat(fn)
-	lastmod = datetime.date.fromtimestamp(stats[8])
-
-	today = datetime.date.today()
-	oldTime = today + datetime.timedelta(days=-1 * daysOld)
-	rv = oldTime > lastmod
-	#print 'isFileOld(%s,%d): %s' % (fn,daysOld, rv)
+	if os.path.basename( fn ).startswith( '.' ):
+		rv = False
+	else:
+		stats = os.stat(fn)
+		lastmod = datetime.date.fromtimestamp(stats[8])
+		today = datetime.date.today()
+		oldTime = today + datetime.timedelta(days=-1 * daysOld)
+		rv = oldTime > lastmod
+		#print 'isFileOld(%s,%d): %s' % (fn,daysOld, rv)
 	return rv
 
 ########################################################################
@@ -69,10 +71,10 @@ def findOldTorrents(rootdir,daysOld=15):
 				oldFiles.append( fn )
 
 		for currentFile in files:
-			fn = os.path.join(root, currentFile)
-			if isFileOld( fn, daysOld ):
-				#print '%s' % fn
-				oldFiles.append( fn )
+			if not currentFile.startswith('.'):
+				fn = os.path.join(root, currentFile)
+				if isFileOld( fn, daysOld ):
+					oldFiles.append( fn )
 	return oldFiles
 ########################################################################
 # main 
