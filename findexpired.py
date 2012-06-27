@@ -47,15 +47,12 @@ def fileNameExistsInFile(fname,readFile):
 ########################################################################
 # stat()s a dir/file, checks to see if its older than n number of days
 def isFileOld(fn, daysOld=15):
-	if os.path.basename( fn ).startswith( '.' ):
-		rv = False
-	else:
-		stats = os.stat(fn)
-		lastmod = datetime.date.fromtimestamp(stats[8])
-		today = datetime.date.today()
-		oldTime = today + datetime.timedelta(days=-1 * daysOld)
-		rv = oldTime > lastmod
-		#print 'isFileOld(%s,%d): %s' % (fn,daysOld, rv)
+	stats = os.stat(fn)
+	lastmod = datetime.date.fromtimestamp(stats[8])
+	today = datetime.date.today()
+	oldTime = today + datetime.timedelta(days=-1 * daysOld)
+	rv = oldTime > lastmod
+	#print 'isFileOld(%s,%d): %s' % (fn,daysOld, rv)
 	return rv
 
 ########################################################################
